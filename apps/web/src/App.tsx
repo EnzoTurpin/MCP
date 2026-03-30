@@ -5,6 +5,7 @@ import AppLayout from "@/src/components/AppLayout";
 import LandingPage from "@/src/pages/Landing";
 import HomePage from "@/src/pages/Home";
 import LoginPage from "@/src/pages/Login";
+import RegisterPage from "@/src/pages/Register";
 import OAuthCallbackPage from "@/src/pages/OAuthCallback";
 
 const App = () => {
@@ -14,6 +15,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>

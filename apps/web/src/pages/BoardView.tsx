@@ -491,6 +491,7 @@ const BoardView = () => {
             display: "flex",
             gap: 12,
             alignItems: "flex-start",
+            minHeight: 0,
           }}
         >
           {columns.map((col) => (

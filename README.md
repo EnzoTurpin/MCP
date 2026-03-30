@@ -13,14 +13,14 @@ Un boilerplate production-ready avec authentification complète, architecture fe
 | Base de données | PostgreSQL + Prisma ORM              |
 | Auth            | JWT dual-token + Google OAuth        |
 | UI              | shadcn/ui + Tailwind CSS v4          |
-| Monorepo        | pnpm workspaces                      |
+| Monorepo        | npm workspaces                       |
 
 ---
 
 ## Prérequis
 
 - Node.js >= 20
-- pnpm >= 9
+- npm >= 10
 - PostgreSQL >= 14
 
 ---
@@ -33,7 +33,7 @@ git clone https://github.com/HenanAeroo/boilerplate.git
 cd boilerplate
 
 # Installer les dépendances
-pnpm install
+npm install
 ```
 
 ---
@@ -72,7 +72,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 
 ```bash
 # A la racine
-pnpm dev
+npm run dev
 ```
 
 - Frontend : http://localhost:3000

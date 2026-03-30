@@ -1,7 +1,10 @@
 {
   "name": "boilerplate",
   "private": true,
-  "packageManager": "pnpm@10.30.3",
+  "packageManager": "npm@11.6.0",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build"

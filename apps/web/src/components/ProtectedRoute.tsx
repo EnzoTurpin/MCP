@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { getToken } from "@/shared/lib/auth";
 
 const ProtectedRoute = () => {
-  const hasRefreshToken = document.cookie.includes("refreshToken");
-  return hasRefreshToken ? <Outlet /> : <Navigate to="/login" replace />;
+  const isAuthenticated = getToken() !== null;
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;

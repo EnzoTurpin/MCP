@@ -4,7 +4,6 @@ import {
   Body,
   UseGuards,
   Req,
-  Get,
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -12,7 +11,6 @@ import { AuthService } from './auth.service';
 import { LocalRegisterDto } from './dto/local-register.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 
@@ -26,8 +24,7 @@ export class AuthController {
     const { accessToken, refreshToken } = await this.authService.localRegister(
       dto.email,
       dto.password,
-      dto.first_name,
-      dto.last_name,
+      dto.display_name,
     );
 
     res.cookie('refreshToken', refreshToken, {
@@ -47,7 +44,7 @@ export class AuthController {
     const { accessToken, refreshToken } = await this.authService.localLogin(
       user.sub,
       user.email,
-      user.first_name,
+      user.display_name,
     );
 
     res.cookie('refreshToken', refreshToken, {
@@ -85,25 +82,4 @@ export class AuthController {
     return res.json({ message: 'Déconnecté' });
   }
 
-  // ----- OAUTH METHODS -----
-  @Get('google')
-  @UseGuards(GoogleAuthGuard)
-  googleAuth() {}
-
-  @Get('google/callback')
-  @UseGuards(GoogleAuthGuard)
-  async googleCallback(@Req() req: any, @Res() res: any) {
-    const { accessToken, refreshToken } = req.user;
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return await res.redirect(
-      `${process.env.FRONT_URL}/oauth/callback?token=${accessToken}`,
-    );
-  }
 }

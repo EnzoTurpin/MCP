@@ -7,46 +7,153 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  expired
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
 model User {
-  id          Int      @id @default(autoincrement())
-  email       String   @unique @db.VarChar(255)
-  first_name  String?
-  last_name   String?
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  password_hash String? @db.VarChar(255)
+  display_name String   @db.VarChar(80)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
 
-  created_at  DateTime @default(now())
-  modified_at DateTime @updatedAt
+  owned_projects    Project[]           @relation("ProjectOwner")
+  project_members   ProjectMember[]
+  assigned_tasks    Task[]              @relation("TaskAssignee")
+  created_tasks     Task[]              @relation("TaskCreator")
+  sent_invitations  ProjectInvitation[]
+  activity          TaskActivity[]
+  refresh_tokens    RefreshToken[]
 
-  authProviders AuthProvider[]
-  refreshTokens RefreshToken[]
+  @@map("users")
 }
 
-enum Provider {
-  local
-  google
+model Project {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @db.VarChar(120)
+  owner_id   String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  owner       User                @relation("ProjectOwner", fields: [owner_id], references: [id])
+  members     ProjectMember[]
+  statuses    ProjectStatus[]
+  tasks       Task[]
+  invitations ProjectInvitation[]
+  activity    TaskActivity[]
+
+  @@map("projects")
 }
 
-model AuthProvider {
-  id          Int      @id @default(autoincrement())
-  provider    Provider
-  provider_id String?
-  password    String?
+model ProjectMember {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String   @db.Uuid
+  user_id    String   @db.Uuid
+  role       String   @db.VarChar(20)
+  joined_at  DateTime @default(now()) @db.Timestamptz(6)
 
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  created_at DateTime @default(now())
-
-  @@unique([provider, provider_id])
-  @@unique([userId, provider])
+  @@unique([project_id, user_id])
+  @@map("project_members")
 }
+
+model ProjectStatus {
+  id            String  @id @default(uuid()) @db.Uuid
+  project_id    String  @db.Uuid
+  name          String  @db.VarChar(50)
+  color         String? @db.VarChar(20)
+  order_index   Int
+  is_default    Boolean @default(false)
+  is_done_state Boolean @default(false)
+
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@unique([project_id, name])
+  @@map("project_statuses")
+}
+
+model Task {
+  id           String        @id @default(uuid()) @db.Uuid
+  project_id   String        @db.Uuid
+  title        String        @db.VarChar(160)
+  description  String?       @db.Text
+  status_id    String        @db.Uuid
+  assignee_id  String?       @db.Uuid
+  creator_id   String        @db.Uuid
+  deadline     DateTime?     @db.Timestamptz(6)
+  position     Int           @default(0)
+  priority     TaskPriority?
+  created_at   DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
+  completed_at DateTime?     @db.Timestamptz(6)
+
+  project  Project       @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  status   ProjectStatus @relation(fields: [status_id], references: [id])
+  assignee User?         @relation("TaskAssignee", fields: [assignee_id], references: [id])
+  creator  User          @relation("TaskCreator", fields: [creator_id], references: [id])
+  activity TaskActivity[]
+
+  @@map("tasks")
+}
+
+model ProjectInvitation {
+  id                 String           @id @default(uuid()) @db.Uuid
+  project_id         String           @db.Uuid
+  email              String           @db.VarChar(255)
+  invited_by_user_id String           @db.Uuid
+  token              String           @unique @db.VarChar(255)
+  status             InvitationStatus @default(pending)
+  expires_at         DateTime         @db.Timestamptz(6)
+  created_at         DateTime         @default(now()) @db.Timestamptz(6)
+
+  project     Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  invited_by  User    @relation(fields: [invited_by_user_id], references: [id])
+
+  @@map("project_invitations")
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
 
 model RefreshToken {
-  id         Int      @id @default(autoincrement())
-  token      String   @unique
-  expires_at DateTime
+  id         String   @id @default(uuid()) @db.Uuid
+  token      String   @unique @db.VarChar(255)
+  expires_at DateTime @db.Timestamptz(6)
+  user_id    String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  created_at DateTime @default(now())
+  @@map("refresh_tokens")
+}
+
+model TaskActivity {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String   @db.Uuid
+  task_id    String?  @db.Uuid
+  user_id    String   @db.Uuid
+  type       String   @db.VarChar(40)
+  metadata   Json?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  project Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  task    Task?    @relation(fields: [task_id], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [user_id], references: [id])
+
+  @@map("task_activity")
 }

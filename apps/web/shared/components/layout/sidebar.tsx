@@ -23,7 +23,7 @@ const Sidebar = () => {
   const { handleLogout } = useAuth();
 
   const { pathname: pathName } = useLocation();
-  const navLinks = [{ href: "/", label: "Dashboard", icon: LayoutDashboard }];
+  const navLinks = [{ href: "/boards", label: "Dashboard", icon: LayoutDashboard }];
 
   const segment = pathName.split("/").at(-1);
   const pageTitle = segment

@@ -110,7 +110,7 @@ export class AuthService {
     if (!match)
       throw new UnauthorizedException('Refresh token invalide ou expiré');
 
-    await this.prisma.refreshToken.delete({ where: { id: match.record.id } });
+    await this.prisma.refreshToken.deleteMany({ where: { id: match.record.id } });
 
     return this.issueTokens(
       match.record.user.id,

@@ -12,6 +12,7 @@ import { CurrentUser } from 'auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from 'auth/guards/jwt-auth.guard';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateStatusDto } from './dto/update-status.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ProjectsService } from './projects.service';
 
@@ -53,6 +54,25 @@ export class ProjectsController {
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string) {
     return this.projectsService.remove(id, userId);
+  }
+
+  @Patch(':id/statuses/:statusId')
+  updateStatus(
+    @Param('id') projectId: string,
+    @Param('statusId') statusId: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateStatusDto,
+  ) {
+    return this.projectsService.updateStatus(projectId, statusId, userId, dto);
+  }
+
+  @Delete(':id/statuses/:statusId')
+  removeStatus(
+    @Param('id') projectId: string,
+    @Param('statusId') statusId: string,
+    @CurrentUser('sub') userId: string,
+  ) {
+    return this.projectsService.removeStatus(projectId, statusId, userId);
   }
 
   @Post(':id/tasks')

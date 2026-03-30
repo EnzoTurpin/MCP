@@ -6,6 +6,7 @@ import {
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateStatusDto } from './dto/update-status.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 const DEFAULT_STATUSES = [
@@ -141,6 +142,42 @@ export class ProjectsService {
   async removeTask(projectId: string, taskId: string, userId: string) {
     await this.assertMemberOrOwner(projectId, userId);
     return this.prisma.task.delete({ where: { id: taskId } });
+  }
+
+  async updateStatus(projectId: string, statusId: string, userId: string, dto: UpdateStatusDto) {
+    await this.assertOwner(projectId, userId);
+    const status = await this.prisma.projectStatus.findUnique({
+      where: { id: statusId },
+      select: { project_id: true },
+    });
+    if (!status || status.project_id !== projectId) throw new NotFoundException('Status not found');
+    return this.prisma.projectStatus.update({
+      where: { id: statusId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.color !== undefined && { color: dto.color }),
+      },
+    });
+  }
+
+  async removeStatus(projectId: string, statusId: string, userId: string) {
+    await this.assertOwner(projectId, userId);
+
+    const statuses = await this.prisma.projectStatus.findMany({
+      where: { project_id: projectId },
+      select: { id: true },
+    });
+    if (statuses.length <= 1) {
+      throw new ForbiddenException('Impossible de supprimer le dernier statut');
+    }
+
+    const status = statuses.find((s) => s.id === statusId);
+    if (!status) throw new NotFoundException('Status not found');
+
+    await this.prisma.$transaction([
+      this.prisma.task.deleteMany({ where: { status_id: statusId } }),
+      this.prisma.projectStatus.delete({ where: { id: statusId } }),
+    ]);
   }
 
   private async assertOwner(projectId: string, userId: string) {

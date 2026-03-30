@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, X, Star } from "lucide-react";
+import { ArrowLeft, Plus, X, Star, Pencil, Trash2, Check } from "lucide-react";
 import {
   getProject,
   createTask,
+  updateStatus,
+  deleteStatus,
   type ProjectDetail,
   type ProjectStatus,
 } from "@/features/projects/actions/project.actions";
@@ -107,15 +109,44 @@ const Column = ({
   column,
   projectId,
   onCardAdded,
+  onColumnRenamed,
+  onColumnDeleted,
 }: {
   column: KanbanColumn;
   projectId: string;
   onCardAdded: (colId: string, card: KanbanCard) => void;
+  onColumnRenamed: (colId: string, newName: string) => void;
+  onColumnDeleted: (colId: string) => void;
 }) => {
   const accent = column.color;
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [nameDraft, setNameDraft] = useState(column.title);
+  const [hoveringHeader, setHoveringHeader] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const confirmRename = async () => {
+    const name = nameDraft.trim();
+    if (!name || name === column.title) { setEditing(false); return; }
+    try {
+      await updateStatus(projectId, column.id, { name });
+      onColumnRenamed(column.id, name.toUpperCase());
+    } catch {
+      setNameDraft(column.title);
+    }
+    setEditing(false);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteStatus(projectId, column.id);
+      onColumnDeleted(column.id);
+    } catch {
+      // suppression impossible (dernier statut ou erreur réseau)
+    }
+  };
 
   const confirm = async () => {
     const title = draft.trim();
@@ -159,21 +190,89 @@ const Column = ({
           justifyContent: "space-between",
           flexShrink: 0,
         }}
+        onMouseEnter={() => setHoveringHeader(true)}
+        onMouseLeave={() => setHoveringHeader(false)}
       >
-        <span style={{ fontSize: 10, letterSpacing: "0.2em", color: accent, fontWeight: 700 }}>
-          {column.title}
-        </span>
-        <span
-          style={{
-            fontSize: 9,
-            color: `${accent}55`,
-            backgroundColor: `${accent}12`,
-            border: `1px solid ${accent}33`,
-            padding: "1px 7px",
-          }}
-        >
-          {column.cards.length}
-        </span>
+        {editing ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1 }}>
+            <input
+              ref={nameInputRef}
+              autoFocus
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmRename();
+                if (e.key === "Escape") { setEditing(false); setNameDraft(column.title); }
+              }}
+              style={{
+                flex: 1,
+                backgroundColor: "transparent",
+                border: `1px solid ${accent}55`,
+                color: accent,
+                fontSize: 10,
+                fontFamily: "'Share Tech Mono', monospace",
+                letterSpacing: "0.15em",
+                fontWeight: 700,
+                padding: "2px 4px",
+                outline: "none",
+                textTransform: "uppercase",
+              }}
+            />
+            <button
+              onClick={confirmRename}
+              style={{ background: "none", border: "none", cursor: "pointer", color: accent, lineHeight: 0, padding: 2 }}
+            >
+              <Check size={11} />
+            </button>
+            <button
+              onClick={() => { setEditing(false); setNameDraft(column.title); }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: `${accent}55`, lineHeight: 0, padding: 2 }}
+            >
+              <X size={11} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <span style={{ fontSize: 10, letterSpacing: "0.2em", color: accent, fontWeight: 700 }}>
+              {column.title}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              {hoveringHeader && (
+                <>
+                  <button
+                    onClick={() => { setEditing(true); setNameDraft(column.title); }}
+                    title="Renommer"
+                    style={{ background: "none", border: "none", cursor: "pointer", color: `${accent}66`, lineHeight: 0, padding: 2, transition: "color 0.15s" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = accent)}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = `${accent}66`)}
+                  >
+                    <Pencil size={10} />
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    title="Supprimer"
+                    style={{ background: "none", border: "none", cursor: "pointer", color: `${accent}66`, lineSpacing: 0, lineHeight: 0, padding: 2, transition: "color 0.15s" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#e11d48")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = `${accent}66`)}
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                </>
+              )}
+              <span
+                style={{
+                  fontSize: 9,
+                  color: `${accent}55`,
+                  backgroundColor: `${accent}12`,
+                  border: `1px solid ${accent}33`,
+                  padding: "1px 7px",
+                }}
+              >
+                {column.cards.length}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       <div style={{ padding: "8px 8px 4px", display: "flex", flexDirection: "column", gap: 6, overflowY: "auto", flex: 1 }}>
@@ -295,6 +394,16 @@ const BoardView = () => {
     );
   };
 
+  const handleColumnRenamed = (colId: string, newName: string) => {
+    setColumns((prev) =>
+      prev.map((col) => (col.id === colId ? { ...col, title: newName } : col)),
+    );
+  };
+
+  const handleColumnDeleted = (colId: string) => {
+    setColumns((prev) => prev.filter((col) => col.id !== colId));
+  };
+
   const accent = C;
   const boardName = project?.name ?? id ?? "Board";
   const totalCards = columns.reduce((s, c) => s + c.cards.length, 0);
@@ -390,6 +499,8 @@ const BoardView = () => {
               column={col}
               projectId={id}
               onCardAdded={handleCardAdded}
+              onColumnRenamed={handleColumnRenamed}
+              onColumnDeleted={handleColumnDeleted}
             />
           ))}
         </div>

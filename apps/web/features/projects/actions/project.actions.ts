@@ -93,3 +93,22 @@ export function deleteTask(projectId: string, taskId: string): Promise<void> {
     ...auth(),
   });
 }
+
+export function updateStatus(
+  projectId: string,
+  statusId: string,
+  data: { name?: string; color?: string },
+): Promise<ProjectStatus> {
+  return apiFetch<ProjectStatus>(`/projects/${projectId}/statuses/${statusId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+    ...auth(),
+  });
+}
+
+export function deleteStatus(projectId: string, statusId: string): Promise<void> {
+  return apiFetch<void>(`/projects/${projectId}/statuses/${statusId}`, {
+    method: "DELETE",
+    ...auth(),
+  });
+}

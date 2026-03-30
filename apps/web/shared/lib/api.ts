@@ -29,6 +29,7 @@ export async function apiFetch<T>(
       : error.message;
     throw new Error(message ?? "Erreur inattendue");
   } else {
-    return res.json();
+    const text = await res.text();
+    return text ? JSON.parse(text) : (undefined as T);
   }
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Plus, Star, Users } from "lucide-react";
+import { Plus, Star, Users, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   getProjects,
   createProject,
+  deleteProject,
   type ProjectSummary,
 } from "@/features/projects/actions/project.actions";
 
@@ -42,10 +43,12 @@ const BoardCard = ({
   board,
   onToggleStar,
   onClick,
+  onDelete,
 }: {
   board: BoardMeta;
   onToggleStar: (id: string) => void;
   onClick: (id: string) => void;
+  onDelete: (id: string) => void;
 }) => {
   const a = board.color;
   return (
@@ -89,25 +92,25 @@ const BoardCard = ({
         {board.name}
       </div>
 
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggleStar(board.id); }}
-        style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: 4,
-          color: board.starred ? GOLD : `${a}44`,
-          lineHeight: 0,
-          transition: "color 0.15s",
-        }}
-        onMouseEnter={(e) => { if (!board.starred) e.currentTarget.style.color = `${GOLD}88`; }}
-        onMouseLeave={(e) => { if (!board.starred) e.currentTarget.style.color = `${a}44`; }}
-      >
-        <Star size={14} fill={board.starred ? GOLD : "none"} />
-      </button>
+      <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 2 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(board.id); }}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: `${a}33`, lineHeight: 0, transition: "color 0.15s" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#e11d48")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = `${a}33`)}
+          title="Supprimer"
+        >
+          <Trash2 size={13} />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleStar(board.id); }}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: board.starred ? GOLD : `${a}44`, lineHeight: 0, transition: "color 0.15s" }}
+          onMouseEnter={(e) => { if (!board.starred) e.currentTarget.style.color = `${GOLD}88`; }}
+          onMouseLeave={(e) => { if (!board.starred) e.currentTarget.style.color = `${a}44`; }}
+        >
+          <Star size={14} fill={board.starred ? GOLD : "none"} />
+        </button>
+      </div>
 
       <div
         style={{
@@ -223,6 +226,16 @@ const HomePage = () => {
       return next;
     });
 
+  const handleDelete = async (id: string) => {
+    const snapshot = projects;
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteProject(id);
+    } catch {
+      setProjects(snapshot);
+    }
+  };
+
   const handleCreate = async () => {
     const name = newName.trim();
     if (!name) return;
@@ -291,7 +304,7 @@ const HomePage = () => {
               <SectionTitle label="ÉPINGLÉS" />
               <div style={GRID}>
                 {starredBoards.map((b) => (
-                  <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} />
+                  <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} onDelete={handleDelete} />
                 ))}
               </div>
             </div>
@@ -301,7 +314,7 @@ const HomePage = () => {
             <SectionTitle label="MES BOARDS" />
             <div style={GRID}>
               {boards.map((b) => (
-                <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} />
+                <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} onDelete={handleDelete} />
               ))}
 
               {creating ? (

@@ -1,10 +1,4 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class LocalRegisterDto {
   @IsEmail()
@@ -17,10 +11,7 @@ export class LocalRegisterDto {
   password!: string;
 
   @IsString()
-  @IsOptional()
-  first_name?: string;
-
-  @IsString()
-  @IsOptional()
-  last_name?: string;
+  @IsNotEmpty()
+  @MaxLength(80)
+  display_name!: string;
 }

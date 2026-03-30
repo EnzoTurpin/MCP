@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "@/shared/lib/utils";
 import {
   LayoutDashboard,
@@ -10,7 +8,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { usePathname } from "next/navigation";
+import { useLocation } from "react-router-dom";
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +22,7 @@ const Sidebar = () => {
 
   const { handleLogout } = useAuth();
 
-  const pathName = usePathname();
+  const { pathname: pathName } = useLocation();
   const navLinks = [{ href: "/", label: "Dashboard", icon: LayoutDashboard }];
 
   const segment = pathName.split("/").at(-1);

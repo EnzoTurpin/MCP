@@ -1,4 +1,4 @@
-# Boilerplate Full-Stack — Next.js + NestJS
+# Boilerplate Full-Stack — React + NestJS
 
 Un boilerplate production-ready avec authentification complète, architecture feature-first et stack moderne.
 
@@ -8,7 +8,7 @@ Un boilerplate production-ready avec authentification complète, architecture fe
 
 | Couche          | Technologie                          |
 | --------------- | ------------------------------------ |
-| Frontend        | Next.js 16 (App Router) + TypeScript |
+| Frontend        | React 19 + Vite + TypeScript         |
 | Backend         | NestJS + TypeScript                  |
 | Base de données | PostgreSQL + Prisma ORM              |
 | Auth            | JWT dual-token + Google OAuth        |
@@ -57,13 +57,13 @@ GOOGLE_CALLBACK_URL=http://localhost:3001/auth/google/callback
 
 # App
 PORT=3001
-FRONT_URL=http://localhost:3000
+FRONT_URL=http://localhost:5173
 ```
 
 ### `apps/web/.env.local`
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001
+VITE_API_URL=http://localhost:3001
 ```
 
 ---
@@ -75,7 +75,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 npm run dev
 ```
 
-- Frontend : http://localhost:3000
+- Frontend : http://localhost:5173
 - Backend : http://localhost:3001
 
 ---
@@ -102,7 +102,7 @@ npx prisma migrate dev
 boilerplate/
 ├── apps/
 │   ├── api/          # Backend NestJS
-│   └── web/          # Frontend Next.js
+│   └── web/          # Frontend React + Vite
 └── README.md
 ```
 
@@ -110,9 +110,11 @@ boilerplate/
 
 ```
 apps/web/
-├── app/              # Routing Next.js uniquement
-│   ├── (auth)/       # Pages publiques (login, oauth)
-│   └── layout.tsx    # Root layout
+├── src/
+│   ├── pages/        # Pages (Home, Login, OAuthCallback)
+│   ├── components/   # Composants structurels (AppLayout, ProtectedRoute)
+│   ├── App.tsx       # Routing React Router
+│   └── main.tsx      # Point d'entrée
 ├── features/         # Logique métier par domaine
 │   └── auth/
 │       ├── actions/  # Appels API
@@ -147,7 +149,7 @@ apps/web/
 
 ## Protection des routes
 
-Le fichier `proxy.ts` protège les routes :
+Le composant `ProtectedRoute.tsx` protège les routes :
 
 - `/` → redirige vers `/login` si non connecté
 - `/login` → redirige vers `/` si déjà connecté

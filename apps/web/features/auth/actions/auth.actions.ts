@@ -15,7 +15,11 @@ export async function login(data: LoginFormData): Promise<void> {
 export async function register(data: RegisterFormData): Promise<void> {
   const { accessToken } = await apiFetch<AuthResponse>("/auth/register", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      email: data.email,
+      password: data.password,
+      display_name: `${data.first_name} ${data.last_name}`.trim(),
+    }),
   });
 
   setToken(accessToken);

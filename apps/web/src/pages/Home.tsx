@@ -1,11 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Star, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  getProjects,
+  createProject,
+  type ProjectSummary,
+} from "@/features/projects/actions/project.actions";
 
 const C    = "#08fdd8";
 const GOLD = "#ff8c00";
 const BG   = "#080c10";
 const DIM  = "#1a5a52";
+
+const COLOR_PALETTE = [C, GOLD, "#7c3aed", "#059669", "#e11d48", "#0ea5e9"];
+
+function projectColor(index: number) {
+  return COLOR_PALETTE[index % COLOR_PALETTE.length];
+}
 
 export interface BoardMeta {
   id: string;
@@ -16,14 +27,16 @@ export interface BoardMeta {
   taskCount: number;
 }
 
-export const MOCK_BOARDS: BoardMeta[] = [
-  { id: "PROJ-001", name: "Projet Web App",  color: C,         starred: true,  members: 5, taskCount: 48 },
-  { id: "PROJ-002", name: "Marketing Q2",    color: GOLD,      starred: true,  members: 3, taskCount: 31 },
-  { id: "PROJ-003", name: "Refonte Mobile",  color: "#7c3aed", starred: false, members: 4, taskCount: 64 },
-  { id: "PROJ-004", name: "Data Pipeline",   color: "#059669", starred: false, members: 2, taskCount: 22 },
-  { id: "PROJ-005", name: "Infrastructure",  color: C,         starred: false, members: 6, taskCount: 40 },
-  { id: "PROJ-006", name: "Design System",   color: GOLD,      starred: false, members: 3, taskCount: 29 },
-];
+function toBoard(p: ProjectSummary, index: number, starred: Set<string>): BoardMeta {
+  return {
+    id: p.id,
+    name: p.name,
+    color: projectColor(index),
+    starred: starred.has(p.id),
+    members: p._count.members,
+    taskCount: p._count.tasks,
+  };
+}
 
 const BoardCard = ({
   board,
@@ -189,12 +202,42 @@ const GRID: React.CSSProperties = {
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const [boards, setBoards] = useState<BoardMeta[]>(MOCK_BOARDS);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [starred, setStarred] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  useEffect(() => {
+    getProjects()
+      .then(setProjects)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const toggleStar = (id: string) =>
-    setBoards((prev) => prev.map((b) => (b.id === id ? { ...b, starred: !b.starred } : b)));
+    setStarred((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
-  const starred = boards.filter((b) => b.starred);
+  const handleCreate = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    try {
+      const project = await createProject(name);
+      setProjects((prev) => [project, ...prev]);
+      setNewName("");
+      setCreating(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erreur lors de la création");
+    }
+  };
+
+  const boards: BoardMeta[] = projects.map((p, i) => toBoard(p, i, starred));
+  const starredBoards = boards.filter((b) => b.starred);
 
   return (
     <div
@@ -229,26 +272,113 @@ const HomePage = () => {
         </h1>
       </div>
 
-      {starred.length > 0 && (
-        <div style={{ marginBottom: 36 }}>
-          <SectionTitle label="ÉPINGLÉS" />
-          <div style={GRID}>
-            {starred.map((b) => (
-              <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} />
-            ))}
-          </div>
+      {loading && (
+        <div style={{ color: `${C}66`, fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: "0.2em" }}>
+          CHARGEMENT...
         </div>
       )}
 
-      <div>
-        <SectionTitle label="MES BOARDS" />
-        <div style={GRID}>
-          {boards.map((b) => (
-            <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} />
-          ))}
-          <CreateBoardCard onClick={() => {}} />
+      {error && (
+        <div style={{ color: "#e11d48", fontFamily: "'Share Tech Mono', monospace", fontSize: 11, letterSpacing: "0.1em", marginBottom: 16 }}>
+          ERREUR : {error}
         </div>
-      </div>
+      )}
+
+      {!loading && (
+        <>
+          {starredBoards.length > 0 && (
+            <div style={{ marginBottom: 36 }}>
+              <SectionTitle label="ÉPINGLÉS" />
+              <div style={GRID}>
+                {starredBoards.map((b) => (
+                  <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <SectionTitle label="MES BOARDS" />
+            <div style={GRID}>
+              {boards.map((b) => (
+                <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} />
+              ))}
+
+              {creating ? (
+                <div
+                  style={{
+                    height: 96,
+                    border: `1px solid ${C}55`,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    gap: 6,
+                    padding: "0 12px",
+                    fontFamily: "'Share Tech Mono', monospace",
+                  }}
+                >
+                  <input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreate();
+                      if (e.key === "Escape") { setCreating(false); setNewName(""); }
+                    }}
+                    placeholder="Nom du board..."
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      borderBottom: `1px solid ${C}55`,
+                      color: C,
+                      fontSize: 11,
+                      fontFamily: "'Share Tech Mono', monospace",
+                      outline: "none",
+                      letterSpacing: "0.08em",
+                      padding: "2px 0",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      onClick={handleCreate}
+                      style={{
+                        flex: 1,
+                        padding: "4px 0",
+                        backgroundColor: C,
+                        color: BG,
+                        border: "none",
+                        fontSize: 9,
+                        fontFamily: "'Share Tech Mono', monospace",
+                        letterSpacing: "0.15em",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                      }}
+                    >
+                      CRÉER
+                    </button>
+                    <button
+                      onClick={() => { setCreating(false); setNewName(""); }}
+                      style={{
+                        padding: "4px 8px",
+                        backgroundColor: "transparent",
+                        border: `1px solid ${C}33`,
+                        color: `${C}66`,
+                        fontSize: 9,
+                        fontFamily: "'Share Tech Mono', monospace",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <CreateBoardCard onClick={() => setCreating(true)} />
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

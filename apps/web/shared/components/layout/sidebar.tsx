@@ -46,7 +46,7 @@ const Sidebar = () => {
           aria-expanded={!collapse}
           aria-label="Toggle Button"
           onClick={() => setCollapse(!collapse)}
-          className="flex items-center gap-3 p-2 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 w-full"
+          className="flex items-center gap-3 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted w-full"
         >
           {!collapse && <PanelLeftClose />}
           {collapse && <PanelLeftOpen />}
@@ -65,8 +65,8 @@ const Sidebar = () => {
                   className={cn(
                     "flex items-center gap-3 p-2 rounded-md w-full",
                     pathName === link.href
-                      ? "text-white bg-neutral-800"
-                      : "text-neutral-400 hover:text-white hover:bg-neutral-800",
+                      ? "text-foreground bg-muted"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted",
                   )}
                 >
                   <link.icon />
@@ -84,7 +84,7 @@ const Sidebar = () => {
         <a
           href="/profile"
           aria-label="Profil"
-          className="flex items-center gap-3 p-2 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 w-full"
+          className="flex items-center gap-3 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted w-full"
         >
           <User />
           {!collapse && <p>Profil</p>}
@@ -92,7 +92,7 @@ const Sidebar = () => {
         <button
           aria-label="Déconnexion"
           onClick={() => handleLogout()}
-          className="flex items-center gap-3 p-2 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 w-full"
+          className="flex items-center gap-3 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted w-full"
         >
           <LogOut />
           {!collapse && <p>Déconnexion</p>}

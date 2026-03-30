@@ -11,10 +11,10 @@ import { TaskPriority } from '../../../prisma/generated/prisma/client';
 export class CreateTaskDto {
   @IsString()
   @MaxLength(160)
-  title: string;
+  title!: string;
 
   @IsUUID()
-  status_id: string;
+  status_id!: string;
 
   @IsString()
   @IsOptional()

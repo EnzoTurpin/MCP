@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIM — Inscription</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --c:     #08fdd8;
+      --gold:  #ff8c00;
+      --bg:    #080c10;
+      --panel: #0a1420;
+      --dim:   #1a5a52;
+    }
+
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg);
+    }
+
+    /* ── Left panel ── */
+    .left-panel {
+      width: 40%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--panel);
+      border-right: 1px solid var(--c);
+    }
+    .panel-grid {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(26,90,82,.13) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26,90,82,.13) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .brk { position: absolute; width: 20px; height: 20px; pointer-events: none; }
+    .brk-tl { top: 12px; left: 12px; border-top: 1px solid var(--c); border-left: 1px solid var(--c); }
+    .brk-tr { top: 12px; right: 16px; border-top: 1px solid var(--c); border-right: 1px solid var(--c); }
+    .brk-bl { bottom: 12px; left: 12px; border-bottom: 1px solid var(--c); border-left: 1px solid var(--c); }
+    .brk-br { bottom: 12px; right: 16px; border-bottom: 1px solid var(--c); border-right: 1px solid var(--c); }
+    .glow-border {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 1px;
+      background-color: var(--c);
+      box-shadow: 0 0 10px var(--c), 0 0 20px rgba(8,253,216,.27);
+      pointer-events: none;
+    }
+
+    .sys-bar {
+      position: relative; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(8,253,216,.2);
+      background-color: rgba(8,253,216,.04);
+    }
+    .sys-bar-label { color: var(--c); font-size: 11px; letter-spacing: .2em; }
+    .status-dot { width: 6px; height: 6px; background-color: var(--c); box-shadow: 0 0 6px var(--c); display: inline-block; }
+
+    .metrics {
+      position: relative; z-index: 10;
+      display: flex; flex-direction: column; gap: 16px;
+      padding: 20px;
+      border-bottom: 1px solid rgba(8,253,216,.13);
+    }
+    .metrics-title { font-size: 10px; color: rgba(8,253,216,.33); letter-spacing: .2em; margin-bottom: 4px; }
+    .metric-row { display: flex; flex-direction: column; gap: 4px; }
+    .metric-labels { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: .15em; }
+    .metric-track { height: 3px; }
+    .metric-fill  { height: 100%; }
+
+    .terminal-log {
+      position: relative; z-index: 10;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(8,253,216,.13);
+      font-size: 11px; line-height: 2; letter-spacing: .08em;
+    }
+
+    .main-msg {
+      position: relative; z-index: 10;
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 24px 20px;
+      flex: 1; justify-content: center;
+    }
+    .msg-label { font-size: 10px; color: rgba(8,253,216,.27); letter-spacing: .2em; margin-bottom: 4px; }
+    .msg-heading {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900; font-size: 28px;
+      text-transform: uppercase; line-height: 1.3;
+      color: #d8fff8; letter-spacing: .04em;
+    }
+    .msg-accent { color: var(--c); text-shadow: 0 0 12px rgba(8,253,216,.4); }
+
+    .mini-boards {
+      position: relative; z-index: 10;
+      display: flex; gap: 8px;
+      padding: 16px 20px;
+      border-top: 1px solid rgba(8,253,216,.13);
+    }
+    .mini-card {
+      flex: 1; padding: 8px 10px;
+      background-color: rgba(8,253,216,.04);
+    }
+    .mini-card-label { font-size: 9px; color: var(--c); letter-spacing: .12em; margin-bottom: 6px; text-transform: uppercase; }
+    .mini-track { height: 2px; background-color: rgba(8,253,216,.13); }
+    .mini-fill  { height: 100%; background-color: var(--c); }
+
+    /* ── Right: form ── */
+    .right-panel {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 32px;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(rgba(26,90,82,.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26,90,82,.1) 1px, transparent 1px);
+      background-size: 24px 24px;
+      overflow-y: auto;
+    }
+
+    .form-box {
+      display: flex; flex-direction: column; gap: 24px;
+      width: 100%; max-width: 360px;
+    }
+    .form-header h2 { font-size: 24px; font-weight: 700; color: #d8fff8; margin-bottom: 4px; }
+    .form-header p  { font-size: 13px; color: rgba(8,253,216,.5); }
+
+    .form-fields { display: flex; flex-direction: column; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field-row { display: flex; gap: 12px; }
+    .field-row .field { flex: 1; }
+    .field label { font-size: 13px; font-weight: 500; color: rgba(8,253,216,.8); letter-spacing: .05em; }
+    .field input {
+      height: 40px;
+      background-color: rgba(8,253,216,.04);
+      border: 1px solid rgba(8,253,216,.25);
+      color: var(--c);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field input::placeholder { color: rgba(8,253,216,.25); }
+    .field input:focus { border-color: rgba(8,253,216,.6); }
+
+    .submit-btn {
+      height: 40px; width: 100%;
+      background-color: var(--c);
+      color: var(--bg);
+      border: none; cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: .15em;
+      transition: all .2s;
+    }
+    .submit-btn:hover { background-color: #0affea; box-shadow: 0 0 20px rgba(8,253,216,.4); }
+
+    .form-footer { text-align: center; font-size: 13px; color: rgba(8,253,216,.4); }
+    .form-footer a { color: var(--c); font-weight: 600; text-decoration: none; }
+    .form-footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+    <div class="panel-grid"></div>
+    <div class="brk brk-tl"></div>
+    <div class="brk brk-tr"></div>
+    <div class="brk brk-bl"></div>
+    <div class="brk brk-br"></div>
+    <div class="glow-border"></div>
+
+    <div class="sys-bar">
+      <span class="sys-bar-label">BOARDS-SYS v2.0</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.15em">
+        <span class="status-dot"></span>
+        <span style="color:var(--c)">ONLINE</span>
+      </span>
+    </div>
+
+    <div class="metrics">
+      <div class="metrics-title">── DIAGNOSTICS SYSTÈME ──</div>
+
+      <div class="metric-row">
+        <div class="metric-labels">
+          <span style="color:rgba(8,253,216,.53)">CPU</span>
+          <span style="color:var(--c)">54%</span>
+        </div>
+        <div class="metric-track" style="background:rgba(8,253,216,.13)">
+          <div class="metric-fill" style="width:54%;background:var(--c);box-shadow:0 0 6px rgba(8,253,216,.53)"></div>
+        </div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-labels">
+          <span style="color:rgba(8,253,216,.53)">MEM</span>
+          <span style="color:var(--c)">38%</span>
+        </div>
+        <div class="metric-track" style="background:rgba(8,253,216,.13)">
+          <div class="metric-fill" style="width:38%;background:var(--c);box-shadow:0 0 6px rgba(8,253,216,.53)"></div>
+        </div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-labels">
+          <span style="color:rgba(8,253,216,.53)">NET</span>
+          <span style="color:var(--gold)">67%</span>
+        </div>
+        <div class="metric-track" style="background:rgba(255,140,0,.13)">
+          <div class="metric-fill" style="width:67%;background:var(--gold);box-shadow:0 0 6px rgba(255,140,0,.53)"></div>
+        </div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-labels">
+          <span style="color:rgba(8,253,216,.53)">I/O</span>
+          <span style="color:var(--gold)">19%</span>
+        </div>
+        <div class="metric-track" style="background:rgba(255,140,0,.13)">
+          <div class="metric-fill" style="width:19%;background:var(--gold);box-shadow:0 0 6px rgba(255,140,0,.53)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="terminal-log">
+      <div style="color:rgba(8,253,216,.4)">&gt; MODULE ENREGISTREMENT ACTIF</div>
+      <div style="color:rgba(8,253,216,.4)">&gt; PROTOCOLE CRÉATION COMPTE v3</div>
+      <div style="color:rgba(8,253,216,.67)">&gt; PRÊT À INITIALISER...</div>
+    </div>
+
+    <div class="main-msg">
+      <div class="msg-label">── MESSAGE DU SYSTÈME ──</div>
+      <h2 class="msg-heading">
+        CRÉEZ.<br>
+        PARTAGEZ.<br>
+        <span class="msg-accent">RÉUSSISSEZ.</span>
+      </h2>
+    </div>
+
+    <div class="mini-boards">
+      <div class="mini-card" style="border:1px solid rgba(8,253,216,.27)">
+        <div class="mini-card-label">Design</div>
+        <div class="mini-track"><div class="mini-fill" style="width:83%"></div></div>
+      </div>
+      <div class="mini-card" style="border:1px solid rgba(8,253,216,.16);opacity:.85">
+        <div class="mini-card-label">Dev</div>
+        <div class="mini-track"><div class="mini-fill" style="width:91%"></div></div>
+      </div>
+      <div class="mini-card" style="border:1px solid rgba(8,253,216,.1);opacity:.7">
+        <div class="mini-card-label">Data</div>
+        <div class="mini-track"><div class="mini-fill" style="width:55%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: form -->
+  <div class="right-panel">
+    <div class="form-box">
+      <div class="form-header">
+        <h2>Créer un compte</h2>
+        <p>Rejoignez-nous et organisez vos projets</p>
+      </div>
+
+      <div class="form-fields">
+        <div class="field-row">
+          <div class="field">
+            <label>Prénom</label>
+            <input type="text" placeholder="Jean" />
+          </div>
+          <div class="field">
+            <label>Nom</label>
+            <input type="text" placeholder="Dupont" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Email</label>
+          <input type="email" placeholder="vous@exemple.com" />
+        </div>
+
+        <div class="field">
+          <label>Mot de passe</label>
+          <input type="password" placeholder="••••••••" />
+        </div>
+
+        <div class="field">
+          <label>Confirmer le mot de passe</label>
+          <input type="password" placeholder="••••••••" />
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button class="submit-btn">Créer mon compte</button>
+      </div>
+
+      <p class="form-footer">
+        Déjà un compte ?&nbsp;
+        <a href="login.html">Se connecter</a>
+      </p>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -7,6 +7,7 @@ import HomePage from "@/src/pages/Home";
 import LoginPage from "@/src/pages/Login";
 import RegisterPage from "@/src/pages/Register";
 import OAuthCallbackPage from "@/src/pages/OAuthCallback";
+import BoardView from "@/src/pages/BoardView";
 
 const App = () => {
   return (
@@ -17,10 +18,9 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
-          <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
-              <Route path="/boards" element={<HomePage />} />
-            </Route>
+          <Route element={<AppLayout />}>
+            <Route path="/boards" element={<HomePage />} />
+            <Route path="/boards/:id" element={<BoardView />} />
           </Route>
         </Routes>
       </AuthProvider>

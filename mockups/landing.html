@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIM — Landing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --c:    #08fdd8;
+      --gold: #ff8c00;
+      --bg:   #080c10;
+      --card: #0c1420;
+      --dim:  #1a5a52;
+    }
+
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(rgba(26,90,82,.16) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26,90,82,.16) 1px, transparent 1px);
+      background-size: 40px 40px;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      color: #d8fff8;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 56px;
+      border-bottom: 1px solid rgba(8,253,216,.2);
+      background-color: rgba(8,253,216,.02);
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    .logo-wrap { display: flex; align-items: center; gap: 12px; }
+    .logo-hex {
+      width: 32px; height: 32px;
+      border: 1px solid var(--c);
+      box-shadow: 0 0 8px rgba(8,253,216,.53), inset 0 0 8px rgba(8,253,216,.13);
+      display: flex; align-items: center; justify-content: center;
+      clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+      background-color: rgba(8,253,216,.1);
+    }
+    .logo-inner {
+      width: 10px; height: 10px;
+      background-color: var(--c);
+      box-shadow: 0 0 8px var(--c);
+      clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    }
+    .brand {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: .2em;
+      color: var(--c);
+      text-shadow: 0 0 12px rgba(8,253,216,.53);
+    }
+    .nav-link {
+      padding: 6px 20px;
+      border: 1px solid var(--c);
+      color: var(--c);
+      font-size: 11px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .nav-link:hover {
+      background-color: rgba(8,253,216,.1);
+      box-shadow: 0 0 12px rgba(8,253,216,.27);
+    }
+
+    /* ── Main split ── */
+    main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Left: carousel ── */
+    .carousel-side {
+      position: relative;
+      width: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .board-card {
+      position: absolute;
+      width: 340px; height: 230px;
+      left: 50%; top: 50%;
+      margin-left: -170px; margin-top: -115px;
+      background-color: var(--card);
+      font-family: 'Share Tech Mono', monospace;
+      overflow: hidden;
+      transition: all .5s ease-in-out;
+    }
+    .board-card.center {
+      transform: translateX(0) scale(1);
+      opacity: 1; z-index: 10;
+    }
+    .board-card.left {
+      transform: translateX(-64%) scale(.86);
+      opacity: .35; z-index: 5;
+    }
+    .board-card.right {
+      transform: translateX(64%) scale(.86);
+      opacity: .35; z-index: 5;
+    }
+
+    .card-cyan  { border: 1px solid var(--c); box-shadow: 0 0 20px rgba(8,253,216,.27), 0 0 40px rgba(8,253,216,.1), inset 0 0 30px rgba(8,253,216,.04); }
+    .card-gold  { border: 1px solid var(--gold); }
+    .card-cyan.center  { box-shadow: 0 0 20px rgba(8,253,216,.27), 0 0 40px rgba(8,253,216,.1), inset 0 0 30px rgba(8,253,216,.04); }
+    .card-gold.center  { box-shadow: 0 0 20px rgba(255,140,0,.27), 0 0 40px rgba(255,140,0,.1), inset 0 0 30px rgba(255,140,0,.04); }
+
+    .card-header {
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom-width: 1px;
+      border-bottom-style: solid;
+    }
+    .card-header-cyan  { border-color: rgba(8,253,216,.33); background-color: rgba(8,253,216,.05); }
+    .card-header-gold  { border-color: rgba(255,140,0,.33); background-color: rgba(255,140,0,.05); }
+    .card-id-cyan  { color: var(--c); font-size: 10px; letter-spacing: .15em; }
+    .card-id-gold  { color: var(--gold); font-size: 10px; letter-spacing: .15em; }
+    .card-status-cyan { color: rgba(8,253,216,.53); font-size: 10px; letter-spacing: .1em; }
+    .card-status-gold { color: rgba(255,140,0,.53); font-size: 10px; letter-spacing: .1em; }
+
+    /* corner brackets */
+    .bracket { position: absolute; width: 10px; height: 10px; }
+    .br-tl { top: 30px; left: 6px; border-top-width: 1px; border-left-width: 1px; border-top-style: solid; border-left-style: solid; }
+    .br-tr { top: 30px; right: 6px; border-top-width: 1px; border-right-width: 1px; border-top-style: solid; border-right-style: solid; }
+    .br-bl { bottom: 6px; left: 6px; border-bottom-width: 1px; border-left-width: 1px; border-bottom-style: solid; border-left-style: solid; }
+    .br-br { bottom: 6px; right: 6px; border-bottom-width: 1px; border-right-width: 1px; border-bottom-style: solid; border-right-style: solid; }
+    .b-cyan { border-color: var(--c) !important; }
+    .b-gold { border-color: var(--gold) !important; }
+
+    .card-name {
+      padding: 18px 16px 10px;
+      font-size: 15px; font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .card-name-cyan { color: var(--c); text-shadow: 0 0 10px rgba(8,253,216,.53); }
+    .card-name-gold { color: var(--gold); text-shadow: 0 0 10px rgba(255,140,0,.53); }
+
+    .card-progress { padding: 0 16px; }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 9px; letter-spacing: .1em;
+      margin-bottom: 4px;
+    }
+    .progress-track { height: 4px; width: 100%; }
+    .progress-track-cyan { background-color: rgba(8,253,216,.13); }
+    .progress-track-gold { background-color: rgba(255,140,0,.13); }
+    .progress-fill { height: 100%; }
+    .pf-cyan { background-color: var(--c); box-shadow: 0 0 6px var(--c); }
+    .pf-gold { background-color: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+    .card-meta {
+      position: absolute; bottom: 14px; left: 16px; right: 16px;
+      font-size: 9px; letter-spacing: .15em;
+      display: flex; justify-content: space-between;
+    }
+    .card-meta-cyan { color: rgba(8,253,216,.33); }
+    .card-meta-gold { color: rgba(255,140,0,.33); }
+
+    /* Dots */
+    .dots {
+      position: absolute; bottom: 36px;
+      display: flex; gap: 8px; z-index: 20;
+      align-items: center;
+    }
+    .dot { height: 4px; border: none; cursor: pointer; transition: all .3s; }
+    .dot.active { width: 24px; background-color: var(--c); box-shadow: 0 0 8px var(--c); }
+    .dot.inactive { width: 6px; background-color: rgba(8,253,216,.2); }
+
+    /* ── Right: hero ── */
+    .hero-side {
+      width: 50%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 56px;
+      gap: 20px;
+    }
+    .hero-prompt { font-size: 11px; letter-spacing: .3em; color: rgba(8,253,216,.6); }
+    .hero-prompt span { color: var(--c); }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid rgba(8,253,216,.33);
+      padding: 4px 12px; width: fit-content;
+      background-color: rgba(8,253,216,.05);
+    }
+    .tag-dot { width: 6px; height: 6px; background-color: var(--c); box-shadow: 0 0 6px var(--c); display: inline-block; }
+    .tag-text { font-size: 10px; letter-spacing: .25em; color: var(--c); }
+    .hero-title { line-height: 1.05; }
+    .title-white {
+      font-size: 56px; font-weight: 900;
+      font-family: 'Orbitron', monospace;
+      text-transform: uppercase;
+      color: #d8fff8; letter-spacing: .04em;
+    }
+    .title-cyan {
+      font-size: 56px; font-weight: 900;
+      font-family: 'Orbitron', monospace;
+      text-transform: uppercase;
+      color: var(--c);
+      text-shadow: 0 0 20px var(--c), 0 0 40px rgba(8,253,216,.33);
+      letter-spacing: .04em;
+    }
+    .hero-desc {
+      font-size: 12px; color: rgba(8,253,216,.4);
+      letter-spacing: .08em; max-width: 380px; line-height: 1.8;
+    }
+    .cursor {
+      display: inline-block; width: 8px; height: 14px;
+      background-color: rgba(8,253,216,.25);
+      vertical-align: middle;
+      animation: blink .53s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .cta-btn {
+      margin-top: 8px;
+      padding: 12px 32px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: .25em; text-transform: uppercase;
+      color: var(--bg);
+      background-color: var(--c);
+      border: none; cursor: pointer;
+      width: fit-content;
+      transition: all .2s;
+    }
+    .cta-btn:hover {
+      background-color: #0affea;
+      box-shadow: 0 0 30px var(--c), 0 0 60px rgba(8,253,216,.33);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="logo-wrap">
+      <div class="logo-hex"><div class="logo-inner"></div></div>
+      <span class="brand">JARVIM</span>
+    </div>
+    <a href="login.html" class="nav-link">Se connecter</a>
+  </nav>
+
+  <!-- Main -->
+  <main>
+
+    <!-- Left: carousel -->
+    <div class="carousel-side">
+
+      <!-- Card 1 — center (cyan) -->
+      <div class="board-card card-cyan center">
+        <div class="card-header card-header-cyan">
+          <span class="card-id-cyan">PROJ-001</span>
+          <span class="card-status-cyan">[WA] ● ACTIF</span>
+        </div>
+        <div class="bracket br-tl b-cyan"></div>
+        <div class="bracket br-tr b-cyan"></div>
+        <div class="bracket br-bl b-cyan"></div>
+        <div class="bracket br-br b-cyan"></div>
+        <div class="card-name card-name-cyan">Projet Web App</div>
+        <div class="card-progress">
+          <div class="progress-label">
+            <span style="color:rgba(8,253,216,.53)">PROGRESSION</span>
+            <span style="color:var(--c)">72%</span>
+          </div>
+          <div class="progress-track progress-track-cyan">
+            <div class="progress-fill pf-cyan" style="width:72%"></div>
+          </div>
+        </div>
+        <div class="card-meta card-meta-cyan">
+          <span>BOARDS-SYS v2.0</span><span>■ ■ ■</span>
+        </div>
+      </div>
+
+      <!-- Card 2 — right (gold) -->
+      <div class="board-card card-gold right">
+        <div class="card-header card-header-gold">
+          <span class="card-id-gold">PROJ-002</span>
+          <span class="card-status-gold">[MK] ● ACTIF</span>
+        </div>
+        <div class="bracket br-tl b-gold"></div>
+        <div class="bracket br-tr b-gold"></div>
+        <div class="bracket br-bl b-gold"></div>
+        <div class="bracket br-br b-gold"></div>
+        <div class="card-name card-name-gold">Marketing Q2</div>
+        <div class="card-progress">
+          <div class="progress-label">
+            <span style="color:rgba(255,140,0,.53)">PROGRESSION</span>
+            <span style="color:var(--gold)">48%</span>
+          </div>
+          <div class="progress-track progress-track-gold">
+            <div class="progress-fill pf-gold" style="width:48%"></div>
+          </div>
+        </div>
+        <div class="card-meta card-meta-gold">
+          <span>BOARDS-SYS v2.0</span><span>■ ■ ■</span>
+        </div>
+      </div>
+
+      <!-- Card 6 — left (gold) -->
+      <div class="board-card card-gold left">
+        <div class="card-header card-header-gold">
+          <span class="card-id-gold">PROJ-006</span>
+          <span class="card-status-gold">[DS] ● ACTIF</span>
+        </div>
+        <div class="bracket br-tl b-gold"></div>
+        <div class="bracket br-tr b-gold"></div>
+        <div class="bracket br-bl b-gold"></div>
+        <div class="bracket br-br b-gold"></div>
+        <div class="card-name card-name-gold">Design System</div>
+        <div class="card-progress">
+          <div class="progress-label">
+            <span style="color:rgba(255,140,0,.53)">PROGRESSION</span>
+            <span style="color:var(--gold)">83%</span>
+          </div>
+          <div class="progress-track progress-track-gold">
+            <div class="progress-fill pf-gold" style="width:83%"></div>
+          </div>
+        </div>
+        <div class="card-meta card-meta-gold">
+          <span>BOARDS-SYS v2.0</span><span>■ ■ ■</span>
+        </div>
+      </div>
+
+      <!-- Dots -->
+      <div class="dots">
+        <button class="dot active"></button>
+        <button class="dot inactive"></button>
+        <button class="dot inactive"></button>
+        <button class="dot inactive"></button>
+        <button class="dot inactive"></button>
+        <button class="dot inactive"></button>
+      </div>
+    </div>
+
+    <!-- Right: hero -->
+    <div class="hero-side">
+      <div class="hero-prompt">root@boards:~$ <span>SYSTÈME OPÉRATIONNEL</span></div>
+
+      <div class="hero-tag">
+        <span class="tag-dot"></span>
+        <span class="tag-text">GESTION DE PROJET — ACCÈS AUTORISÉ</span>
+      </div>
+
+      <div class="hero-title">
+        <div class="title-white">ORGANISEZ.</div>
+        <div class="title-cyan">DOMINEZ.</div>
+      </div>
+
+      <div class="hero-desc">
+        <div>&gt; Visualisez vos tâches en temps réel</div>
+        <div>&gt; Collaborez avec votre équipe</div>
+        <div>&gt; Gardez le cap sur vos objectifs</div>
+        <div style="color:rgba(8,253,216,.27)">&gt; <span class="cursor"></span></div>
+      </div>
+
+      <button class="cta-btn">[ ACCÉDER AU SYSTÈME → ]</button>
+    </div>
+
+  </main>
+</body>
+</html>

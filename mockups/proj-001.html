@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIM — PROJ-001</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --c: #08fdd8;
+      --gold: #ff8c00;
+      --purple: #7c3aed;
+      --green: #059669;
+      --bg: #080c10;
+      --card: #0c1420;
+      --col: #0a1018;
+      --dim: #1a5a52;
+    }
+
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(rgba(26,90,82,.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26,90,82,.12) 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: #d8fff8;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(8,253,216,.2);
+      background-color: rgba(8,253,216,.04);
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: rgba(8,253,216,.75);
+      padding: 4px;
+      transition: color .15s;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .back-btn:hover { color: var(--c); }
+
+    .divider {
+      width: 1px;
+      height: 20px;
+      background-color: rgba(8,253,216,.33);
+    }
+
+    .board-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--c);
+      text-shadow: 0 0 10px rgba(8,253,216,.44);
+      white-space: nowrap;
+    }
+
+    .meta-right {
+      margin-left: auto;
+      font-size: 9px;
+      letter-spacing: .15em;
+      color: rgba(8,253,216,.44);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--c);
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px;
+      transition: color .15s;
+    }
+
+    .star-btn:hover { color: #0affea; }
+
+    .content {
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 20px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .col {
+      width: 272px;
+      flex-shrink: 0;
+      background-color: var(--col);
+      border: 1px solid rgba(8,253,216,.22);
+      display: flex;
+      flex-direction: column;
+      max-height: 100%;
+    }
+
+    .col-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(8,253,216,.22);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .col-title {
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: var(--c);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .col-count {
+      font-size: 9px;
+      color: rgba(8,253,216,.55);
+      background-color: rgba(8,253,216,.12);
+      border: 1px solid rgba(8,253,216,.33);
+      padding: 1px 7px;
+    }
+
+    .cards {
+      padding: 8px 8px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .card {
+      background-color: var(--card);
+      border: 1px solid rgba(8,253,216,.18);
+      padding: 10px 12px;
+      transition: all .15s;
+    }
+
+    .card:hover {
+      border-color: rgba(8,253,216,.38);
+      box-shadow: 0 0 10px rgba(8,253,216,.06);
+    }
+
+    .labels {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 8px;
+      letter-spacing: .15em;
+      padding: 1px 6px;
+      border: 1px solid currentColor;
+      background-color: rgba(255,255,255,.04);
+      color: var(--c);
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .card-title {
+      font-size: 11px;
+      color: #d0f0ec;
+      letter-spacing: .04em;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 9px;
+      letter-spacing: .1em;
+      color: rgba(8,253,216,.45);
+    }
+
+    .checks {
+      color: rgba(8,253,216,.62);
+    }
+
+    .checks.done {
+      color: var(--green);
+    }
+
+    .due {
+      margin-left: auto;
+      color: rgba(8,253,216,.55);
+    }
+
+    .assignee {
+      margin-left: auto;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background-color: rgba(8,253,216,.13);
+      border: 1px solid rgba(8,253,216,.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: var(--c);
+      font-weight: 700;
+    }
+
+    .add-col {
+      width: 240px;
+      flex-shrink: 0;
+      padding: 10px 16px;
+      background-color: rgba(8,253,216,.08);
+      border: 1px dashed rgba(8,253,216,.33);
+      color: rgba(8,253,216,.55);
+      font-size: 10px;
+      letter-spacing: .2em;
+      font-family: 'Share Tech Mono', monospace;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 0;
+    }
+
+    .add-col:hover {
+      border-color: rgba(8,253,216,.55);
+      color: rgba(8,253,216,.75);
+      background-color: rgba(8,253,216,.12);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="back-btn" aria-label="Retour">←</button>
+    <div class="divider"></div>
+    <div class="board-title">PROJ-001 — Projet Web App</div>
+    <div class="meta-right">
+      <span>5 MEMBRES · 13 CARTES</span>
+      <button class="star-btn" aria-label="Épingler">★</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- BACKLOG -->
+    <section class="col" aria-label="Backlog">
+      <header class="col-header">
+        <span class="col-title">BACKLOG</span>
+        <span class="col-count">3</span>
+      </header>
+      <div class="cards">
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--gold); background-color: rgba(255,140,0,.12); border-color: rgba(255,140,0,.6);">DOC</span>
+          </div>
+          <div class="card-title">Rédiger les specs techniques v2</div>
+          <div class="meta">
+            <div class="assignee">AL</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--purple); background-color: rgba(124,58,237,.10); border-color: rgba(124,58,237,.55);">UX</span>
+          </div>
+          <div class="card-title">Audit accessibilité WCAG 2.1</div>
+          <div class="meta"></div>
+        </article>
+
+        <article class="card">
+          <div class="labels"></div>
+          <div class="card-title">Intégrer Sentry pour le monitoring</div>
+          <div class="meta">
+            <div class="assignee" style="border-color: rgba(8,253,216,.33);">MT</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- À FAIRE -->
+    <section class="col" aria-label="À faire">
+      <header class="col-header">
+        <span class="col-title">À FAIRE</span>
+        <span class="col-count">3</span>
+      </header>
+      <div class="cards">
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--c); background-color: rgba(8,253,216,.10); border-color: rgba(8,253,216,.55);">FRONT</span>
+          </div>
+          <div class="card-title">Refactor composant AuthForm</div>
+          <div class="meta">
+            <span class="checks">☑ 0/3</span>
+            <div class="assignee">EZ</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--green); background-color: rgba(5,150,105,.10); border-color: rgba(5,150,105,.55);">TEST</span>
+          </div>
+          <div class="card-title">Écrire les tests unitaires auth</div>
+          <div class="meta">
+            <span class="due">⏱ 03 avr</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="labels"></div>
+          <div class="card-title">Mise à jour dépendances npm</div>
+          <div class="meta">
+            <div class="assignee">AL</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- EN COURS -->
+    <section class="col" aria-label="En cours">
+      <header class="col-header">
+        <span class="col-title">EN COURS</span>
+        <span class="col-count">2</span>
+      </header>
+      <div class="cards">
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--c); background-color: rgba(8,253,216,.10); border-color: rgba(8,253,216,.55);">FRONT</span>
+          </div>
+          <div class="card-title">Page liste des boards (UI)</div>
+          <div class="meta">
+            <span class="checks">☑ 2/4</span>
+            <div class="assignee">EZ</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--gold); background-color: rgba(255,140,0,.10); border-color: rgba(255,140,0,.55);">BACK</span>
+          </div>
+          <div class="card-title">API endpoint GET /boards</div>
+          <div class="meta">
+            <span class="due">⏱ 01 avr</span>
+            <div class="assignee">MT</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- EN REVIEW -->
+    <section class="col" aria-label="En review">
+      <header class="col-header">
+        <span class="col-title">EN REVIEW</span>
+        <span class="col-count">2</span>
+      </header>
+      <div class="cards">
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--c); background-color: rgba(8,253,216,.10); border-color: rgba(8,253,216,.55);">FRONT</span>
+          </div>
+          <div class="card-title">Landing page — carousel boards</div>
+          <div class="meta">
+            <span class="checks done">☑ 3/3</span>
+            <div class="assignee">EZ</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--purple); background-color: rgba(124,58,237,.10); border-color: rgba(124,58,237,.55);">STYLE</span>
+          </div>
+          <div class="card-title">Thème eDEX-UI global</div>
+          <div class="meta">
+            <span class="checks done">☑ 3/3</span>
+            <span class="due" style="margin-left: 0;">⏱ 31 mar</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- TERMINÉ -->
+    <section class="col" aria-label="Terminé">
+      <header class="col-header">
+        <span class="col-title">TERMINÉ</span>
+        <span class="col-count">3</span>
+      </header>
+      <div class="cards">
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--green); background-color: rgba(5,150,105,.10); border-color: rgba(5,150,105,.55);">INFRA</span>
+          </div>
+          <div class="card-title">Setup monorepo Turborepo</div>
+          <div class="meta">
+            <div class="assignee">AL</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--gold); background-color: rgba(255,140,0,.10); border-color: rgba(255,140,0,.55);">BACK</span>
+          </div>
+          <div class="card-title">Auth JWT + refresh tokens</div>
+          <div class="meta">
+            <div class="assignee">MT</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="labels">
+            <span class="chip" style="color: var(--c); background-color: rgba(8,253,216,.10); border-color: rgba(8,253,216,.55);">FRONT</span>
+          </div>
+          <div class="card-title">Pages login / register</div>
+          <div class="meta">
+            <div class="assignee">EZ</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <button class="add-col" aria-label="Ajouter une liste">+ AJOUTER UNE LISTE</button>
+  </div>
+</body>
+</html>
+

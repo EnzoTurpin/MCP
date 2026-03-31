@@ -11,5 +11,8 @@
   },
   "devDependencies": {
     "turbo": "^2.8.21"
+  },
+  "dependencies": {
+    "prisma": "^7.6.0"
   }
 }

@@ -16,8 +16,9 @@ const DIM  = "#1a5a52";
 
 const COLOR_PALETTE = [C, GOLD, "#7c3aed", "#059669", "#e11d48", "#0ea5e9"];
 
-function projectColor(index: number) {
-  return COLOR_PALETTE[index % COLOR_PALETTE.length];
+function projectColor(id: string) {
+  const hash = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return COLOR_PALETTE[hash % COLOR_PALETTE.length];
 }
 
 export interface BoardMeta {
@@ -33,7 +34,7 @@ function toBoard(p: ProjectSummary, index: number): BoardMeta {
   return {
     id: p.id,
     name: p.name,
-    color: projectColor(index),
+    color: projectColor(p.id),
     starred: p.isFavorited,
     members: p._count.members,
     taskCount: p._count.tasks,
@@ -234,7 +235,7 @@ const HomePage = () => {
         }
         if (a.isFavorited) return -1;
         if (b.isFavorited) return 1;
-        return 0;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
     });
     try {
@@ -332,7 +333,7 @@ const HomePage = () => {
           <div>
             <SectionTitle label="MES BOARDS" />
             <div style={GRID}>
-              {boards.map((b) => (
+              {boards.filter((b) => !b.starred).map((b) => (
                 <BoardCard key={b.id} board={b} onToggleStar={handleToggleStar} onClick={(id) => navigate(`/boards/${id}`)} onDelete={handleDelete} />
               ))}
 

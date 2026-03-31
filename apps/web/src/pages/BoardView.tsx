@@ -9,6 +9,7 @@ import {
   type ProjectDetail,
   type ProjectStatus,
 } from "@/features/projects/actions/project.actions";
+import { CardDetailModal, type CardModalData } from "@/src/components/CardDetailModal";
 
 const C    = "#08fdd8";
 const GOLD = "#ff8c00";
@@ -21,8 +22,12 @@ const COL  = "#0a1018";
 interface KanbanCard {
   id: string;
   title: string;
+  description?: string | null;
+  priority?: "low" | "medium" | "high" | null;
+  deadline?: string | null; // ISO string
+  dueDate?: string;         // formatted display
   assignee?: string;
-  dueDate?: string;
+  statusId: string;
 }
 
 interface KanbanColumn {
@@ -42,18 +47,37 @@ function toColumns(statuses: ProjectStatus[]): KanbanColumn[] {
     cards: s.tasks.map((t) => ({
       id: t.id,
       title: t.title,
-      assignee: t.assignee?.display_name,
+      description: t.description,
+      priority: t.priority,
+      deadline: t.deadline,
       dueDate: t.deadline
         ? new Date(t.deadline).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
         : undefined,
+      assignee: t.assignee?.display_name,
+      statusId: s.id,
     })),
   }));
 }
 
 // ─── Card component ───────────────────────────────────────────────────────────
 
-const CardItem = ({ card, accent }: { card: KanbanCard; accent: string }) => (
+const PRIORITY_DOT: Record<string, string> = {
+  low:    "#22c55e",
+  medium: "#ff8c00",
+  high:   "#e11d48",
+};
+
+const CardItem = ({
+  card,
+  accent,
+  onClick,
+}: {
+  card: KanbanCard;
+  accent: string;
+  onClick: () => void;
+}) => (
   <div
+    onClick={onClick}
     style={{
       backgroundColor: CARD,
       border: `1px solid ${accent}22`,
@@ -75,31 +99,41 @@ const CardItem = ({ card, accent }: { card: KanbanCard; accent: string }) => (
       {card.title}
     </div>
 
-    {(card.assignee || card.dueDate) && (
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 9, color: `${accent}55`, letterSpacing: "0.1em" }}>
-        {card.dueDate && <span>⏱ {card.dueDate}</span>}
-        {card.assignee && (
-          <div
-            style={{
-              marginLeft: "auto",
-              width: 22,
-              height: 22,
-              borderRadius: "50%",
-              backgroundColor: `${accent}22`,
-              border: `1px solid ${accent}55`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 8,
-              color: accent,
-              fontWeight: 700,
-            }}
-          >
-            {card.assignee.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
-    )}
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 9, color: `${accent}55`, letterSpacing: "0.1em" }}>
+      {card.priority && (
+        <span
+          title={card.priority}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            backgroundColor: PRIORITY_DOT[card.priority],
+            flexShrink: 0,
+          }}
+        />
+      )}
+      {card.dueDate && <span>⏱ {card.dueDate}</span>}
+      {card.assignee && (
+        <div
+          style={{
+            marginLeft: "auto",
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            backgroundColor: `${accent}22`,
+            border: `1px solid ${accent}55`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 8,
+            color: accent,
+            fontWeight: 700,
+          }}
+        >
+          {card.assignee.slice(0, 2).toUpperCase()}
+        </div>
+      )}
+    </div>
   </div>
 );
 
@@ -109,12 +143,14 @@ const Column = ({
   column,
   projectId,
   onCardAdded,
+  onCardClick,
   onColumnRenamed,
   onColumnDeleted,
 }: {
   column: KanbanColumn;
   projectId: string;
   onCardAdded: (colId: string, card: KanbanCard) => void;
+  onCardClick: (card: KanbanCard) => void;
   onColumnRenamed: (colId: string, newName: string) => void;
   onColumnDeleted: (colId: string) => void;
 }) => {
@@ -156,10 +192,14 @@ const Column = ({
       onCardAdded(column.id, {
         id: task.id,
         title: task.title,
-        assignee: task.assignee?.display_name,
+        description: task.description,
+        priority: task.priority,
+        deadline: task.deadline,
         dueDate: task.deadline
           ? new Date(task.deadline).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
           : undefined,
+        assignee: task.assignee?.display_name,
+        statusId: column.id,
       });
     } catch {
       // La carte n'a pas pu être créée, on ne met pas à jour l'UI
@@ -251,7 +291,7 @@ const Column = ({
                   <button
                     onClick={confirmDelete}
                     title="Supprimer"
-                    style={{ background: "none", border: "none", cursor: "pointer", color: `${accent}66`, lineSpacing: 0, lineHeight: 0, padding: 2, transition: "color 0.15s" }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: `${accent}66`, lineHeight: 0, padding: 2, transition: "color 0.15s" }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = "#e11d48")}
                     onMouseLeave={(e) => (e.currentTarget.style.color = `${accent}66`)}
                   >
@@ -277,7 +317,12 @@ const Column = ({
 
       <div style={{ padding: "8px 8px 4px", display: "flex", flexDirection: "column", gap: 6, overflowY: "auto", flex: 1 }}>
         {column.cards.map((card) => (
-          <CardItem key={card.id} card={card} accent={accent} />
+          <CardItem
+            key={card.id}
+            card={card}
+            accent={accent}
+            onClick={() => onCardClick(card)}
+          />
         ))}
       </div>
 
@@ -374,6 +419,7 @@ const BoardView = () => {
   const [starred, setStarred] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -392,6 +438,68 @@ const BoardView = () => {
         col.id === colId ? { ...col, cards: [...col.cards, card] } : col,
       ),
     );
+  };
+
+  const handleCardClick = (card: KanbanCard) => {
+    setSelectedCard(card);
+  };
+
+  const handleCardUpdated = (updates: Partial<CardModalData> & { statusId?: string }) => {
+    setColumns((prev) => {
+      if (!selectedCard) return prev;
+
+      const fromStatusId = selectedCard.statusId;
+      const toStatusId = updates.statusId ?? fromStatusId;
+      const isMove = toStatusId !== fromStatusId;
+
+      const updatedCard: KanbanCard = {
+        ...selectedCard,
+        title: updates.title ?? selectedCard.title,
+        description: "description" in updates ? updates.description : selectedCard.description,
+        priority: "priority" in updates ? updates.priority : selectedCard.priority,
+        deadline: "deadline" in updates ? updates.deadline : selectedCard.deadline,
+        dueDate: updates.deadline !== undefined
+          ? (updates.deadline
+            ? new Date(updates.deadline).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
+            : undefined)
+          : selectedCard.dueDate,
+        statusId: toStatusId,
+      };
+
+      // Update the selectedCard ref so subsequent updates in the same session are correct
+      setSelectedCard(updatedCard);
+
+      if (!isMove) {
+        return prev.map((col) =>
+          col.id === fromStatusId
+            ? { ...col, cards: col.cards.map((c) => (c.id === updatedCard.id ? updatedCard : c)) }
+            : col,
+        );
+      }
+
+      // Move card: remove from source, append to destination
+      return prev.map((col) => {
+        if (col.id === fromStatusId) {
+          return { ...col, cards: col.cards.filter((c) => c.id !== updatedCard.id) };
+        }
+        if (col.id === toStatusId) {
+          return { ...col, cards: [...col.cards, updatedCard] };
+        }
+        return col;
+      });
+    });
+  };
+
+  const handleCardDeleted = () => {
+    if (!selectedCard) return;
+    setColumns((prev) =>
+      prev.map((col) =>
+        col.id === selectedCard.statusId
+          ? { ...col, cards: col.cards.filter((c) => c.id !== selectedCard.id) }
+          : col,
+      ),
+    );
+    setSelectedCard(null);
   };
 
   const handleColumnRenamed = (colId: string, newName: string) => {
@@ -500,11 +608,23 @@ const BoardView = () => {
               column={col}
               projectId={id}
               onCardAdded={handleCardAdded}
+              onCardClick={handleCardClick}
               onColumnRenamed={handleColumnRenamed}
               onColumnDeleted={handleColumnDeleted}
             />
           ))}
         </div>
+      )}
+
+      {selectedCard && id && (
+        <CardDetailModal
+          card={selectedCard}
+          columns={columns.map((c) => ({ id: c.id, title: c.title, color: c.color }))}
+          projectId={id}
+          onClose={() => setSelectedCard(null)}
+          onUpdated={handleCardUpdated}
+          onDeleted={handleCardDeleted}
+        />
       )}
     </div>
   );

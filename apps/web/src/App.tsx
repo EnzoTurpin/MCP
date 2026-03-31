@@ -8,6 +8,8 @@ import LoginPage from "@/src/pages/Login";
 import RegisterPage from "@/src/pages/Register";
 import OAuthCallbackPage from "@/src/pages/OAuthCallback";
 import BoardView from "@/src/pages/BoardView";
+import SharedBoardView from "@/src/pages/SharedBoardView";
+import AcceptInvitation from "@/src/pages/AcceptInvitation";
 
 const App = () => {
   return (
@@ -18,6 +20,8 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
+          <Route path="/shared/:token" element={<SharedBoardView />} />
+          <Route path="/invitations/:token" element={<AcceptInvitation />} />
           <Route element={<AppLayout />}>
             <Route path="/boards" element={<HomePage />} />
             <Route path="/boards/:id" element={<BoardView />} />

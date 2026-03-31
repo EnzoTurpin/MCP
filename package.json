@@ -1,5 +1,5 @@
 {
-  "name": "boilerplate",
+  "name": "jarvim",
   "private": true,
   "packageManager": "npm@11.6.0",
   "workspaces": [

@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
-import { PokemonService } from './pokemon/pokemon.service';
 import { McpService } from './mcp/mcp.service';
+import { PrismaService } from '../../apps/api/src/prisma/prisma.service';
 
 @Module({
   imports: [],
   controllers: [],
-  providers: [PokemonService, McpService],
+  providers: [
+    McpService,
+    PrismaService
+  ],
 })
 export class AppModule {}

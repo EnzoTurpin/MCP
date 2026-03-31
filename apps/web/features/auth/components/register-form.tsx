@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Link } from "react-router-dom";
 import { FieldError } from "@/shared/components/ui/field";
 import { Input } from "@/shared/components/ui/input";
+import { PasswordInput } from "@/shared/components/ui/password-input";
 import { useAuth } from "../hooks/use-auth";
 
 const passwordRules = [
@@ -152,9 +153,8 @@ const RegisterForm = () => {
           <label className="text-sm font-medium text-foreground">
             Mot de passe
           </label>
-          <Input
+          <PasswordInput
             {...form.register("password")}
-            type="password"
             placeholder="••••••••"
             className="h-10 text-sm"
           />
@@ -166,9 +166,8 @@ const RegisterForm = () => {
           <label className="text-sm font-medium text-foreground">
             Confirmer le mot de passe
           </label>
-          <Input
+          <PasswordInput
             {...form.register("confirm_password")}
-            type="password"
             placeholder="••••••••"
             className="h-10 text-sm"
           />

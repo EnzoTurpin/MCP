@@ -23,8 +23,12 @@ export type ProjectSummary = {
   id: string;
   name: string;
   created_at: string;
+  isFavorited: boolean;
+  favoritedAt: string | null;
   _count: { tasks: number; members: number };
 };
+
+export type ProjectRole = 'owner' | 'admin' | 'member';
 
 export type ProjectDetail = {
   id: string;
@@ -32,7 +36,7 @@ export type ProjectDetail = {
   owner_id: string;
   share_token: string | null;
   statuses: ProjectStatus[];
-  members: { user_id: string }[];
+  members: { user_id: string; role: 'admin' | 'member' }[];
   _count: { members: number };
 };
 
@@ -40,11 +44,12 @@ export type ProjectMember = {
   id: string;
   display_name: string;
   email: string;
+  role: 'admin' | 'member';
   joined_at?: string;
 };
 
 export type MembersResponse = {
-  owner: ProjectMember;
+  owner: { id: string; display_name: string; email: string };
   members: ProjectMember[];
 };
 
@@ -77,6 +82,13 @@ export function createProject(name: string): Promise<ProjectSummary> {
 
 export function deleteProject(id: string): Promise<void> {
   return apiFetch<void>(`/projects/${id}`, { method: "DELETE", ...auth() });
+}
+
+export function toggleFavorite(projectId: string): Promise<{ isFavorited: boolean }> {
+  return apiFetch<{ isFavorited: boolean }>(`/projects/${projectId}/favorite`, {
+    method: "POST",
+    ...auth(),
+  });
 }
 
 export function createTask(
@@ -189,6 +201,18 @@ export function getMembers(projectId: string): Promise<MembersResponse> {
 export function removeMember(projectId: string, userId: string): Promise<void> {
   return apiFetch<void>(`/projects/${projectId}/members/${userId}`, {
     method: "DELETE",
+    ...auth(),
+  });
+}
+
+export function updateMemberRole(
+  projectId: string,
+  userId: string,
+  role: 'admin' | 'member',
+): Promise<void> {
+  return apiFetch<void>(`/projects/${projectId}/members/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
     ...auth(),
   });
 }

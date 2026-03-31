@@ -24,19 +24,65 @@ const DEFAULT_STATUSES = [
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllForUser(userId: string) {
-    return this.prisma.project.findMany({
-      where: {
-        OR: [
-          { owner_id: userId },
-          { members: { some: { user_id: userId } } },
-        ],
-      },
-      include: {
-        _count: { select: { tasks: true, members: true } },
-      },
-      orderBy: { created_at: 'desc' },
+  async findAllForUser(userId: string) {
+    const [projects, favorites] = await Promise.all([
+      this.prisma.project.findMany({
+        where: {
+          OR: [
+            { owner_id: userId },
+            { members: { some: { user_id: userId } } },
+          ],
+        },
+        include: {
+          _count: { select: { tasks: true, members: true } },
+        },
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.projectFavorite.findMany({
+        where: { user_id: userId },
+        select: { project_id: true, created_at: true },
+        orderBy: { created_at: 'desc' },
+      }),
+    ]);
+
+    const favoriteMap = new Map(
+      favorites.map((f) => [f.project_id, f.created_at]),
+    );
+
+    return projects
+      .map((p) => ({
+        ...p,
+        isFavorited: favoriteMap.has(p.id),
+        favoritedAt: favoriteMap.get(p.id) ?? null,
+      }))
+      .sort((a, b) => {
+        if (a.isFavorited && b.isFavorited) {
+          return b.favoritedAt!.getTime() - a.favoritedAt!.getTime();
+        }
+        if (a.isFavorited) return -1;
+        if (b.isFavorited) return 1;
+        return 0;
+      });
+  }
+
+  async toggleFavorite(projectId: string, userId: string) {
+    await this.assertMemberOrOwner(projectId, userId);
+
+    const existing = await this.prisma.projectFavorite.findUnique({
+      where: { project_id_user_id: { project_id: projectId, user_id: userId } },
     });
+
+    if (existing) {
+      await this.prisma.projectFavorite.delete({
+        where: { project_id_user_id: { project_id: projectId, user_id: userId } },
+      });
+      return { isFavorited: false };
+    }
+
+    await this.prisma.projectFavorite.create({
+      data: { project_id: projectId, user_id: userId },
+    });
+    return { isFavorited: true };
   }
 
   create(userId: string, dto: CreateProjectDto) {
@@ -67,7 +113,7 @@ export class ProjectsService {
             },
           },
         },
-        members: { select: { user_id: true } },
+        members: { select: { user_id: true, role: true } },
         _count: { select: { members: true } },
       },
     });
@@ -233,7 +279,8 @@ export class ProjectsService {
   // ─── Invitations par email ────────────────────────────────────────────────
 
   async inviteMember(projectId: string, invitedByUserId: string, email: string) {
-    await this.assertOwner(projectId, invitedByUserId);
+    // Admins et propriétaires peuvent inviter
+    await this.assertAdminOrOwner(projectId, invitedByUserId);
 
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -359,7 +406,7 @@ export class ProjectsService {
   }
 
   async getMembers(projectId: string, userId: string) {
-    await this.assertOwner(projectId, userId);
+    await this.assertMemberOrOwner(projectId, userId);
 
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -376,11 +423,53 @@ export class ProjectsService {
 
     return {
       owner: project.owner,
-      members: project.members.map((m) => ({ ...m.user, joined_at: m.joined_at })),
+      members: project.members.map((m) => ({
+        ...m.user,
+        role: m.role,
+        joined_at: m.joined_at,
+      })),
     };
   }
 
   async removeMember(projectId: string, targetUserId: string, requesterId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { owner_id: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+
+    const isOwner = project.owner_id === requesterId;
+
+    const targetMember = await this.prisma.projectMember.findUnique({
+      where: { project_id_user_id: { project_id: projectId, user_id: targetUserId } },
+    });
+    if (!targetMember) throw new NotFoundException('Ce membre ne fait pas partie du projet');
+
+    if (!isOwner) {
+      // Vérifier que le requérant est admin
+      const requesterMember = await this.prisma.projectMember.findUnique({
+        where: { project_id_user_id: { project_id: projectId, user_id: requesterId } },
+      });
+      if (!requesterMember || requesterMember.role !== 'admin') {
+        throw new ForbiddenException();
+      }
+      // Un admin ne peut expulser que des membres (pas d'autres admins)
+      if (targetMember.role === 'admin') {
+        throw new ForbiddenException('Un admin ne peut pas expulser un autre admin');
+      }
+    }
+
+    await this.prisma.projectMember.delete({
+      where: { project_id_user_id: { project_id: projectId, user_id: targetUserId } },
+    });
+  }
+
+  async updateMemberRole(
+    projectId: string,
+    targetUserId: string,
+    requesterId: string,
+    role: 'admin' | 'member',
+  ) {
     await this.assertOwner(projectId, requesterId);
 
     const member = await this.prisma.projectMember.findUnique({
@@ -388,8 +477,9 @@ export class ProjectsService {
     });
     if (!member) throw new NotFoundException('Ce membre ne fait pas partie du projet');
 
-    await this.prisma.projectMember.delete({
+    return this.prisma.projectMember.update({
       where: { project_id_user_id: { project_id: projectId, user_id: targetUserId } },
+      data: { role },
     });
   }
 
@@ -402,6 +492,20 @@ export class ProjectsService {
     });
     if (!project) throw new NotFoundException('Project not found');
     if (project.owner_id !== userId) throw new ForbiddenException();
+  }
+
+  private async assertAdminOrOwner(projectId: string, userId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { owner_id: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    if (project.owner_id === userId) return;
+
+    const member = await this.prisma.projectMember.findUnique({
+      where: { project_id_user_id: { project_id: projectId, user_id: userId } },
+    });
+    if (!member || member.role !== 'admin') throw new ForbiddenException();
   }
 
   private async assertMemberOrOwner(

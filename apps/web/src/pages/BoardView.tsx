@@ -145,6 +145,7 @@ const Column = ({
   column,
   projectId,
   readOnly,
+  canManageColumns,
   onCardAdded,
   onCardClick,
   onColumnRenamed,
@@ -153,6 +154,7 @@ const Column = ({
   column: KanbanColumn;
   projectId: string;
   readOnly?: boolean;
+  canManageColumns?: boolean;
   onCardAdded: (colId: string, card: KanbanCard) => void;
   onCardClick: (card: KanbanCard) => void;
   onColumnRenamed: (colId: string, newName: string) => void;
@@ -281,7 +283,7 @@ const Column = ({
               {column.title}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              {hoveringHeader && !readOnly && (
+              {hoveringHeader && canManageColumns && (
                 <>
                   <button
                     onClick={() => { setEditing(true); setNameDraft(column.title); }}
@@ -441,10 +443,11 @@ const BoardView = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const isReadOnly =
-    project !== null &&
-    project.owner_id !== currentUserId &&
-    !project.members.some((m) => m.user_id === currentUserId);
+  const isOwner = project !== null && project.owner_id === currentUserId;
+  const currentMember = project?.members.find((m) => m.user_id === currentUserId);
+  const isAdmin = currentMember?.role === 'admin';
+  const isReadOnly = project !== null && !isOwner && !currentMember;
+  const canManageColumns = isOwner;
 
   const handleCardAdded = (colId: string, card: KanbanCard) => {
     setColumns((prev) =>
@@ -653,6 +656,7 @@ const BoardView = () => {
               column={col}
               projectId={id}
               readOnly={isReadOnly}
+              canManageColumns={canManageColumns}
               onCardAdded={handleCardAdded}
               onCardClick={handleCardClick}
               onColumnRenamed={handleColumnRenamed}
@@ -679,6 +683,9 @@ const BoardView = () => {
           projectId={id}
           projectName={project.name}
           shareToken={project.share_token}
+          currentUserId={currentUserId}
+          isOwner={isOwner}
+          isAdmin={isAdmin}
           onClose={() => setShowShareModal(false)}
           onShareTokenChanged={(token) => setProject((p) => p ? { ...p, share_token: token } : p)}
         />

@@ -21,6 +21,12 @@ enum InvitationStatus {
   expired
 }
 
+enum ProjectRole {
+  owner
+  admin
+  member
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -32,6 +38,7 @@ model User {
 
   owned_projects    Project[]           @relation("ProjectOwner")
   project_members   ProjectMember[]
+  project_favorites ProjectFavorite[]
   assigned_tasks    Task[]              @relation("TaskAssignee")
   created_tasks     Task[]              @relation("TaskCreator")
   sent_invitations  ProjectInvitation[]
@@ -51,6 +58,7 @@ model Project {
 
   owner       User                @relation("ProjectOwner", fields: [owner_id], references: [id])
   members     ProjectMember[]
+  favorites   ProjectFavorite[]
   statuses    ProjectStatus[]
   tasks       Task[]
   invitations ProjectInvitation[]
@@ -60,17 +68,30 @@ model Project {
 }
 
 model ProjectMember {
-  id         String   @id @default(uuid()) @db.Uuid
-  project_id String   @db.Uuid
-  user_id    String   @db.Uuid
-  role       String   @db.VarChar(20)
-  joined_at  DateTime @default(now()) @db.Timestamptz(6)
+  id         String      @id @default(uuid()) @db.Uuid
+  project_id String      @db.Uuid
+  user_id    String      @db.Uuid
+  role       ProjectRole @default(member)
+  joined_at  DateTime    @default(now()) @db.Timestamptz(6)
 
   project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([project_id, user_id])
   @@map("project_members")
+}
+
+model ProjectFavorite {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String   @db.Uuid
+  user_id    String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([project_id, user_id])
+  @@map("project_favorites")
 }
 
 model ProjectStatus {

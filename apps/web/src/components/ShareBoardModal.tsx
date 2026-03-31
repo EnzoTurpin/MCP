@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Link, Mail, Users, Copy, Check, Trash2, RefreshCw, UserMinus } from "lucide-react";
+import { X, Link, Mail, Users, Copy, Check, Trash2, RefreshCw, UserMinus, Shield, ChevronDown } from "lucide-react";
 import {
   generateShareLink,
   revokeShareLink,
   inviteMember,
   getMembers,
   removeMember,
+  updateMemberRole,
   type MembersResponse,
 } from "@/features/projects/actions/project.actions";
 
@@ -20,6 +21,9 @@ interface Props {
   projectId: string;
   projectName: string;
   shareToken: string | null;
+  currentUserId: string;
+  isOwner: boolean;
+  isAdmin: boolean;
   onClose: () => void;
   onShareTokenChanged: (token: string | null) => void;
 }
@@ -28,6 +32,9 @@ export const ShareBoardModal = ({
   projectId,
   projectName,
   shareToken: initialToken,
+  currentUserId,
+  isOwner,
+  isAdmin,
   onClose,
   onShareTokenChanged,
 }: Props) => {
@@ -45,8 +52,18 @@ export const ShareBoardModal = ({
   const [members, setMembers] = useState<MembersResponse | null>(null);
   const [membersLoading, setMembersLoading] = useState(false);
   const [removeLoading, setRemoveLoading] = useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = useState<string | null>(null);
 
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Admins et propriétaires voient l'onglet invite ; members non
+  const canInvite = isOwner || isAdmin;
+  // Par défaut, ouvrir sur l'onglet lien si propriétaire, sinon membres
+  const defaultTab: Tab = isOwner ? "link" : canInvite ? "invite" : "members";
+
+  useEffect(() => {
+    setTab(defaultTab);
+  }, []);
 
   const shareUrl = shareToken
     ? `${window.location.origin}/shared/${shareToken}`
@@ -132,6 +149,25 @@ export const ShareBoardModal = ({
     }
   }
 
+  async function handleRoleChange(userId: string, newRole: 'admin' | 'member') {
+    setRoleLoading(userId);
+    try {
+      await updateMemberRole(projectId, userId, newRole);
+      setMembers((prev) =>
+        prev
+          ? {
+              ...prev,
+              members: prev.members.map((m) =>
+                m.id === userId ? { ...m, role: newRole } : m,
+              ),
+            }
+          : null,
+      );
+    } finally {
+      setRoleLoading(null);
+    }
+  }
+
   const tabStyle = (t: Tab) => ({
     background: "none",
     border: "none",
@@ -197,16 +233,20 @@ export const ShareBoardModal = ({
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: `1px solid ${C}22` }}>
-          <button style={tabStyle("link")} onClick={() => setTab("link")}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <Link size={10} /> LIEN PUBLIC
-            </span>
-          </button>
-          <button style={tabStyle("invite")} onClick={() => setTab("invite")}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <Mail size={10} /> INVITER
-            </span>
-          </button>
+          {isOwner && (
+            <button style={tabStyle("link")} onClick={() => setTab("link")}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Link size={10} /> LIEN PUBLIC
+              </span>
+            </button>
+          )}
+          {canInvite && (
+            <button style={tabStyle("invite")} onClick={() => setTab("invite")}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Mail size={10} /> INVITER
+              </span>
+            </button>
+          )}
           <button style={tabStyle("members")} onClick={() => setTab("members")}>
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <Users size={10} /> MEMBRES
@@ -218,7 +258,7 @@ export const ShareBoardModal = ({
         <div style={{ padding: 16, minHeight: 200 }}>
 
           {/* ─── Onglet Lien public ─────────────────────────────────────── */}
-          {tab === "link" && (
+          {tab === "link" && isOwner && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <p style={{ fontSize: 10, color: `${C}66`, letterSpacing: "0.1em", lineHeight: 1.6, margin: 0 }}>
                 Toute personne disposant du lien peut consulter ce board en lecture seule, sans connexion requise.
@@ -345,7 +385,7 @@ export const ShareBoardModal = ({
           )}
 
           {/* ─── Onglet Inviter ─────────────────────────────────────────── */}
-          {tab === "invite" && (
+          {tab === "invite" && canInvite && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <p style={{ fontSize: 10, color: `${C}66`, letterSpacing: "0.1em", lineHeight: 1.6, margin: 0 }}>
                 Invitez un collaborateur par email. Un lien d'invitation sera généré à partager manuellement.
@@ -462,6 +502,7 @@ export const ShareBoardModal = ({
                 <>
                   {/* Propriétaire */}
                   <MemberRow
+                    id={members.owner.id}
                     name={members.owner.display_name}
                     email={members.owner.email}
                     badge="PROPRIÉTAIRE"
@@ -474,17 +515,28 @@ export const ShareBoardModal = ({
                       Aucun membre pour l'instant.
                     </div>
                   )}
-                  {members.members.map((m) => (
-                    <MemberRow
-                      key={m.id}
-                      name={m.display_name}
-                      email={m.email}
-                      badge="MEMBRE"
-                      badgeColor={`${C}88`}
-                      onRemove={() => handleRemoveMember(m.id)}
-                      removeLoading={removeLoading === m.id}
-                    />
-                  ))}
+                  {members.members.map((m) => {
+                    const canKick =
+                      isOwner || (isAdmin && m.role === 'member' && m.id !== currentUserId);
+                    const canChangeRole = isOwner && m.id !== currentUserId;
+
+                    return (
+                      <MemberRow
+                        key={m.id}
+                        id={m.id}
+                        name={m.display_name}
+                        email={m.email}
+                        badge={m.role === 'admin' ? 'ADMIN' : 'MEMBRE'}
+                        badgeColor={m.role === 'admin' ? '#8b5cf6' : `${C}88`}
+                        onRemove={canKick ? () => handleRemoveMember(m.id) : undefined}
+                        removeLoading={removeLoading === m.id}
+                        canChangeRole={canChangeRole}
+                        currentRole={m.role}
+                        onRoleChange={(newRole) => handleRoleChange(m.id, newRole)}
+                        roleLoading={roleLoading === m.id}
+                      />
+                    );
+                  })}
                 </>
               )}
             </div>
@@ -502,13 +554,22 @@ const MemberRow = ({
   badgeColor,
   onRemove,
   removeLoading,
+  canChangeRole,
+  currentRole,
+  onRoleChange,
+  roleLoading,
 }: {
+  id: string;
   name: string;
   email: string;
   badge: string;
   badgeColor: string;
   onRemove?: () => void;
   removeLoading?: boolean;
+  canChangeRole?: boolean;
+  currentRole?: 'admin' | 'member';
+  onRoleChange?: (role: 'admin' | 'member') => void;
+  roleLoading?: boolean;
 }) => (
   <div
     style={{
@@ -544,9 +605,51 @@ const MemberRow = ({
         {email}
       </div>
     </div>
-    <span style={{ fontSize: 8, color: badgeColor, letterSpacing: "0.12em", flexShrink: 0 }}>
-      {badge}
-    </span>
+
+    {canChangeRole && currentRole && onRoleChange ? (
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <select
+          value={currentRole}
+          disabled={roleLoading}
+          onChange={(e) => onRoleChange(e.target.value as 'admin' | 'member')}
+          style={{
+            backgroundColor: CARD,
+            border: `1px solid ${C}33`,
+            color: badgeColor,
+            fontSize: 8,
+            letterSpacing: "0.12em",
+            padding: "2px 20px 2px 6px",
+            cursor: "pointer",
+            fontFamily: "'Share Tech Mono', monospace",
+            appearance: "none",
+            outline: "none",
+            opacity: roleLoading ? 0.5 : 1,
+          }}
+        >
+          <option value="member">MEMBRE</option>
+          <option value="admin">ADMIN</option>
+        </select>
+        <ChevronDown
+          size={8}
+          style={{
+            position: "absolute",
+            right: 4,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: `${C}66`,
+            pointerEvents: "none",
+          }}
+        />
+      </div>
+    ) : (
+      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        {badge === "ADMIN" && <Shield size={8} style={{ color: badgeColor }} />}
+        <span style={{ fontSize: 8, color: badgeColor, letterSpacing: "0.12em" }}>
+          {badge}
+        </span>
+      </div>
+    )}
+
     {onRemove && (
       <button
         onClick={onRemove}

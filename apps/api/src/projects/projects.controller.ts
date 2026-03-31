@@ -14,6 +14,7 @@ import { JwtAuthGuard } from 'auth/guards/jwt-auth.guard';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { InviteMemberDto } from './dto/invite-member.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ProjectsService } from './projects.service';
@@ -80,6 +81,14 @@ export class ProjectsController {
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser('sub') userId: string) {
     return this.projectsService.remove(id, userId);
+  }
+
+  @Post(':id/favorite')
+  toggleFavorite(
+    @Param('id') projectId: string,
+    @CurrentUser('sub') userId: string,
+  ) {
+    return this.projectsService.toggleFavorite(projectId, userId);
   }
 
   @Patch(':id/statuses/:statusId')
@@ -164,6 +173,16 @@ export class ProjectsController {
     @CurrentUser('sub') userId: string,
   ) {
     return this.projectsService.getMembers(projectId, userId);
+  }
+
+  @Patch(':id/members/:userId')
+  updateMemberRole(
+    @Param('id') projectId: string,
+    @Param('userId') targetUserId: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateMemberRoleDto,
+  ) {
+    return this.projectsService.updateMemberRole(projectId, targetUserId, userId, dto.role);
   }
 
   @Delete(':id/members/:userId')

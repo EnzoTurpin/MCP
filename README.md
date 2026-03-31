@@ -147,7 +147,7 @@ apps/web/
 
 ---
 
-## Protection des routes
+## Protection des routes.
 
 Le composant `ProtectedRoute.tsx` protège les routes :
 

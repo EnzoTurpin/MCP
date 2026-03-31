@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, X, Pencil } from "lucide-react";
-import { getUser, getToken } from "@/shared/lib/auth";
+import { getUser, getToken, setToken } from "@/shared/lib/auth";
 import { apiFetch } from "@/shared/lib/api";
 import {
   getProjects,
@@ -301,6 +301,14 @@ const ProfilePage = () => {
         }),
         token: getToken() ?? undefined,
       });
+
+      // Rafraîchir le JWT pour que les données soient à jour au prochain chargement
+      const { accessToken } = await apiFetch<{ accessToken: string }>("/auth/refresh", {
+        method: "POST",
+      });
+      setToken(accessToken);
+
+
       setSaveOk(true);
       setTimeout(() => setSaveOk(false), 2500);
     } catch (e: unknown) {

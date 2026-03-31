@@ -5,7 +5,7 @@ import { McpService } from './mcp/mcp.service';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule, {
-    logger: false, 
+    logger: false,
   });
 
   try {

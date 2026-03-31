@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { getUser } from "../../shared/lib/auth";
 
 const C = "#08fdd8";     // eDEX primary teal
 const GOLD = "#ff8c00";  // secondary orange
@@ -142,6 +143,11 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [tick, setTick] = useState(true);
+  const user = getUser();
+  const isLoggedIn = Boolean(user);
+  const authLabel = user
+    ? (user.display_name?.split(" ").filter(Boolean)[0] ?? user.email)
+    : "Se connecter";
 
   useEffect(() => {
     const timer = setInterval(() => setCurrent((c) => (c + 1) % BOARDS.length), 3500);
@@ -225,9 +231,9 @@ const LandingPage = () => {
           </span>
         </div>
 
-        {/* Right — Se connecter */}
+        {/* Right — auth / profil */}
         <Link
-          to="/login"
+          to={isLoggedIn ? "/boards" : "/login"}
           style={{
             padding: "6px 20px",
             border: `1px solid ${C}`,
@@ -248,7 +254,7 @@ const LandingPage = () => {
             e.currentTarget.style.boxShadow = "none";
           }}
         >
-          Se connecter
+          {authLabel}
         </Link>
       </nav>
 

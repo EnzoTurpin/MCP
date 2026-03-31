@@ -1,8 +1,11 @@
 import {
+  BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from 'prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -21,19 +24,65 @@ const DEFAULT_STATUSES = [
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAllForUser(userId: string) {
-    return this.prisma.project.findMany({
-      where: {
-        OR: [
-          { owner_id: userId },
-          { members: { some: { user_id: userId } } },
-        ],
-      },
-      include: {
-        _count: { select: { tasks: true, members: true } },
-      },
-      orderBy: { created_at: 'desc' },
+  async findAllForUser(userId: string) {
+    const [projects, favorites] = await Promise.all([
+      this.prisma.project.findMany({
+        where: {
+          OR: [
+            { owner_id: userId },
+            { members: { some: { user_id: userId } } },
+          ],
+        },
+        include: {
+          _count: { select: { tasks: true, members: true } },
+        },
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.projectFavorite.findMany({
+        where: { user_id: userId },
+        select: { project_id: true, created_at: true },
+        orderBy: { created_at: 'desc' },
+      }),
+    ]);
+
+    const favoriteMap = new Map(
+      favorites.map((f) => [f.project_id, f.created_at]),
+    );
+
+    return projects
+      .map((p) => ({
+        ...p,
+        isFavorited: favoriteMap.has(p.id),
+        favoritedAt: favoriteMap.get(p.id) ?? null,
+      }))
+      .sort((a, b) => {
+        if (a.isFavorited && b.isFavorited) {
+          return b.favoritedAt!.getTime() - a.favoritedAt!.getTime();
+        }
+        if (a.isFavorited) return -1;
+        if (b.isFavorited) return 1;
+        return 0;
+      });
+  }
+
+  async toggleFavorite(projectId: string, userId: string) {
+    await this.assertMemberOrOwner(projectId, userId);
+
+    const existing = await this.prisma.projectFavorite.findUnique({
+      where: { project_id_user_id: { project_id: projectId, user_id: userId } },
     });
+
+    if (existing) {
+      await this.prisma.projectFavorite.delete({
+        where: { project_id_user_id: { project_id: projectId, user_id: userId } },
+      });
+      return { isFavorited: false };
+    }
+
+    await this.prisma.projectFavorite.create({
+      data: { project_id: projectId, user_id: userId },
+    });
+    return { isFavorited: true };
   }
 
   create(userId: string, dto: CreateProjectDto) {
@@ -64,12 +113,12 @@ export class ProjectsService {
             },
           },
         },
+        members: { select: { user_id: true, role: true } },
         _count: { select: { members: true } },
       },
     });
 
     if (!project) throw new NotFoundException('Project not found');
-    await this.assertMemberOrOwner(projectId, userId, project.owner_id);
 
     return project;
   }
@@ -180,6 +229,262 @@ export class ProjectsService {
     ]);
   }
 
+  // ─── Partage via lien ────────────────────────────────────────────────────────
+
+  async generateShareLink(projectId: string, userId: string) {
+    await this.assertOwner(projectId, userId);
+    const shareToken = randomBytes(32).toString('hex');
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: { share_token: shareToken },
+    });
+    return { shareToken };
+  }
+
+  async revokeShareLink(projectId: string, userId: string) {
+    await this.assertOwner(projectId, userId);
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: { share_token: null },
+    });
+  }
+
+  async findByShareToken(shareToken: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { share_token: shareToken },
+      include: {
+        statuses: {
+          orderBy: { order_index: 'asc' },
+          include: {
+            tasks: {
+              orderBy: { position: 'asc' },
+              include: {
+                assignee: { select: { id: true, display_name: true } },
+              },
+            },
+          },
+        },
+        _count: { select: { members: true } },
+      },
+    });
+
+    if (!project) throw new NotFoundException('Lien de partage invalide ou révoqué');
+
+    // Ne pas exposer le share_token dans la réponse publique
+    const { share_token, ...rest } = project;
+    void share_token;
+    return rest;
+  }
+
+  // ─── Invitations par email ────────────────────────────────────────────────
+
+  async inviteMember(projectId: string, invitedByUserId: string, email: string) {
+    // Admins et propriétaires peuvent inviter
+    await this.assertAdminOrOwner(projectId, invitedByUserId);
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { owner_id: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+
+    // Vérifier que l'invité n'est pas déjà propriétaire ou membre
+    const invitedUser = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (invitedUser) {
+      if (invitedUser.id === project.owner_id) {
+        throw new ConflictException('Cet utilisateur est déjà propriétaire du projet');
+      }
+      const existingMember = await this.prisma.projectMember.findUnique({
+        where: { project_id_user_id: { project_id: projectId, user_id: invitedUser.id } },
+      });
+      if (existingMember) {
+        throw new ConflictException('Cet utilisateur est déjà membre du projet');
+      }
+    }
+
+    // Supprimer l'éventuelle invitation en attente pour cet email
+    await this.prisma.projectInvitation.deleteMany({
+      where: { project_id: projectId, email, status: 'pending' },
+    });
+
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+
+    return this.prisma.projectInvitation.create({
+      data: {
+        project_id: projectId,
+        email,
+        invited_by_user_id: invitedByUserId,
+        token,
+        status: 'pending',
+        expires_at: expiresAt,
+      },
+      select: { token: true, email: true, expires_at: true },
+    });
+  }
+
+  async getInvitationInfo(token: string) {
+    const invitation = await this.prisma.projectInvitation.findUnique({
+      where: { token },
+      include: {
+        project: { select: { name: true } },
+        invited_by: { select: { display_name: true } },
+      },
+    });
+
+    if (!invitation) throw new NotFoundException('Invitation introuvable');
+    if (invitation.status !== 'pending') {
+      throw new BadRequestException('Cette invitation a déjà été utilisée ou a expiré');
+    }
+    if (invitation.expires_at < new Date()) {
+      await this.prisma.projectInvitation.update({
+        where: { token },
+        data: { status: 'expired' },
+      });
+      throw new BadRequestException('Cette invitation a expiré');
+    }
+
+    return {
+      email: invitation.email,
+      projectName: invitation.project.name,
+      invitedBy: invitation.invited_by.display_name,
+      expiresAt: invitation.expires_at,
+    };
+  }
+
+  async acceptInvitation(token: string, userId: string) {
+    const invitation = await this.prisma.projectInvitation.findUnique({
+      where: { token },
+      select: {
+        project_id: true,
+        email: true,
+        status: true,
+        expires_at: true,
+      },
+    });
+
+    if (!invitation) throw new NotFoundException('Invitation introuvable');
+    if (invitation.status !== 'pending') {
+      throw new BadRequestException('Invitation déjà utilisée ou expirée');
+    }
+    if (invitation.expires_at < new Date()) {
+      await this.prisma.projectInvitation.update({
+        where: { token },
+        data: { status: 'expired' },
+      });
+      throw new BadRequestException('Invitation expirée');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    if (!user || user.email !== invitation.email) {
+      throw new ForbiddenException("Cette invitation ne correspond pas à votre compte");
+    }
+
+    const existingMember = await this.prisma.projectMember.findUnique({
+      where: { project_id_user_id: { project_id: invitation.project_id, user_id: userId } },
+    });
+
+    await this.prisma.$transaction([
+      ...(existingMember ? [] : [
+        this.prisma.projectMember.create({
+          data: { project_id: invitation.project_id, user_id: userId, role: 'member' },
+        }),
+      ]),
+      this.prisma.projectInvitation.update({
+        where: { token },
+        data: { status: 'accepted' },
+      }),
+    ]);
+
+    return { projectId: invitation.project_id };
+  }
+
+  async getMembers(projectId: string, userId: string) {
+    await this.assertMemberOrOwner(projectId, userId);
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        owner: { select: { id: true, display_name: true, email: true } },
+        members: {
+          include: { user: { select: { id: true, display_name: true, email: true } } },
+          orderBy: { joined_at: 'asc' },
+        },
+      },
+    });
+
+    if (!project) throw new NotFoundException('Project not found');
+
+    return {
+      owner: project.owner,
+      members: project.members.map((m) => ({
+        ...m.user,
+        role: m.role,
+        joined_at: m.joined_at,
+      })),
+    };
+  }
+
+  async removeMember(projectId: string, targetUserId: string, requesterId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { owner_id: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+
+    const isOwner = project.owner_id === requesterId;
+
+    const targetMember = await this.prisma.projectMember.findUnique({
+      where: { project_id_user_id: { project_id: projectId, user_id: targetUserId } },
+    });
+    if (!targetMember) throw new NotFoundException('Ce membre ne fait pas partie du projet');
+
+    if (!isOwner) {
+      // Vérifier que le requérant est admin
+      const requesterMember = await this.prisma.projectMember.findUnique({
+        where: { project_id_user_id: { project_id: projectId, user_id: requesterId } },
+      });
+      if (!requesterMember || requesterMember.role !== 'admin') {
+        throw new ForbiddenException();
+      }
+      // Un admin ne peut expulser que des membres (pas d'autres admins)
+      if (targetMember.role === 'admin') {
+        throw new ForbiddenException('Un admin ne peut pas expulser un autre admin');
+      }
+    }
+
+    await this.prisma.projectMember.delete({
+      where: { project_id_user_id: { project_id: projectId, user_id: targetUserId } },
+    });
+  }
+
+  async updateMemberRole(
+    projectId: string,
+    targetUserId: string,
+    requesterId: string,
+    role: 'admin' | 'member',
+  ) {
+    await this.assertOwner(projectId, requesterId);
+
+    const member = await this.prisma.projectMember.findUnique({
+      where: { project_id_user_id: { project_id: projectId, user_id: targetUserId } },
+    });
+    if (!member) throw new NotFoundException('Ce membre ne fait pas partie du projet');
+
+    return this.prisma.projectMember.update({
+      where: { project_id_user_id: { project_id: projectId, user_id: targetUserId } },
+      data: { role },
+    });
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
   private async assertOwner(projectId: string, userId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -187,6 +492,20 @@ export class ProjectsService {
     });
     if (!project) throw new NotFoundException('Project not found');
     if (project.owner_id !== userId) throw new ForbiddenException();
+  }
+
+  private async assertAdminOrOwner(projectId: string, userId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { owner_id: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    if (project.owner_id === userId) return;
+
+    const member = await this.prisma.projectMember.findUnique({
+      where: { project_id_user_id: { project_id: projectId, user_id: userId } },
+    });
+    if (!member || member.role !== 'admin') throw new ForbiddenException();
   }
 
   private async assertMemberOrOwner(

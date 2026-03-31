@@ -5,6 +5,7 @@ import {
   getProjects,
   createProject,
   deleteProject,
+  toggleFavorite,
   type ProjectSummary,
 } from "@/features/projects/actions/project.actions";
 
@@ -15,8 +16,9 @@ const DIM  = "#1a5a52";
 
 const COLOR_PALETTE = [C, GOLD, "#7c3aed", "#059669", "#e11d48", "#0ea5e9"];
 
-function projectColor(index: number) {
-  return COLOR_PALETTE[index % COLOR_PALETTE.length];
+function projectColor(id: string) {
+  const hash = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return COLOR_PALETTE[hash % COLOR_PALETTE.length];
 }
 
 export interface BoardMeta {
@@ -28,12 +30,12 @@ export interface BoardMeta {
   taskCount: number;
 }
 
-function toBoard(p: ProjectSummary, index: number, starred: Set<string>): BoardMeta {
+function toBoard(p: ProjectSummary): BoardMeta {
   return {
     id: p.id,
     name: p.name,
-    color: projectColor(index),
-    starred: starred.has(p.id),
+    color: projectColor(p.id),
+    starred: p.isFavorited,
     members: p._count.members,
     taskCount: p._count.tasks,
   };
@@ -206,7 +208,6 @@ const GRID: React.CSSProperties = {
 const HomePage = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [starred, setStarred] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -219,12 +220,31 @@ const HomePage = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const toggleStar = (id: string) =>
-    setStarred((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
+  const handleToggleStar = async (id: string) => {
+    // Mise à jour optimiste
+    setProjects((prev) => {
+      const updated = prev.map((p) =>
+        p.id === id
+          ? { ...p, isFavorited: !p.isFavorited, favoritedAt: !p.isFavorited ? new Date().toISOString() : null }
+          : p,
+      );
+      // Trier : favoris en premier (ordre d'ajout), puis le reste
+      return [...updated].sort((a, b) => {
+        if (a.isFavorited && b.isFavorited) {
+          return new Date(b.favoritedAt!).getTime() - new Date(a.favoritedAt!).getTime();
+        }
+        if (a.isFavorited) return -1;
+        if (b.isFavorited) return 1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
     });
+    try {
+      await toggleFavorite(id);
+    } catch {
+      // Annuler la mise à jour optimiste en rechargeant
+      getProjects().then(setProjects).catch(() => {});
+    }
+  };
 
   const handleDelete = async (id: string) => {
     const snapshot = projects;
@@ -249,7 +269,7 @@ const HomePage = () => {
     }
   };
 
-  const boards: BoardMeta[] = projects.map((p, i) => toBoard(p, i, starred));
+  const boards: BoardMeta[] = projects.map((p) => toBoard(p));
   const starredBoards = boards.filter((b) => b.starred);
 
   return (
@@ -304,7 +324,7 @@ const HomePage = () => {
               <SectionTitle label="ÉPINGLÉS" />
               <div style={GRID}>
                 {starredBoards.map((b) => (
-                  <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} onDelete={handleDelete} />
+                  <BoardCard key={b.id} board={b} onToggleStar={handleToggleStar} onClick={(id) => navigate(`/boards/${id}`)} onDelete={handleDelete} />
                 ))}
               </div>
             </div>
@@ -313,8 +333,8 @@ const HomePage = () => {
           <div>
             <SectionTitle label="MES BOARDS" />
             <div style={GRID}>
-              {boards.map((b) => (
-                <BoardCard key={b.id} board={b} onToggleStar={toggleStar} onClick={(id) => navigate(`/boards/${id}`)} onDelete={handleDelete} />
+              {boards.filter((b) => !b.starred).map((b) => (
+                <BoardCard key={b.id} board={b} onToggleStar={handleToggleStar} onClick={(id) => navigate(`/boards/${id}`)} onDelete={handleDelete} />
               ))}
 
               {creating ? (

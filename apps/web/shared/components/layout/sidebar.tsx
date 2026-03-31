@@ -25,11 +25,6 @@ const Sidebar = () => {
   const { pathname: pathName } = useLocation();
   const navLinks = [{ href: "/boards", label: "Dashboard", icon: LayoutDashboard }];
 
-  const segment = pathName.split("/").at(-1);
-  const pageTitle = segment
-    ? segment.charAt(0).toUpperCase() + segment.slice(1)
-    : "Home";
-
   const user = getUser();
 
   return (
@@ -53,7 +48,7 @@ const Sidebar = () => {
         </button>
         {!collapse && (
           <h2 className="whitespace-nowrap overflow-hidden px-2 text-m">
-            Bonjour {user?.first_name} !
+            Bonjour {user?.display_name} !
           </h2>
         )}
         {navLinks.map((link) => (

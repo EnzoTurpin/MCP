@@ -20,7 +20,7 @@ const LoginForm = () => {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
-  const { handleLogin, loginWithGoogle, isLoading, error } = useAuth();
+  const { handleLogin, isLoading, error } = useAuth();
 
   return (
     <form

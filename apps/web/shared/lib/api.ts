@@ -18,12 +18,18 @@ export async function apiFetch<T>(
     ...rest,
     credentials: "include",
     headers: { ...header, ...rest.headers },
+  }).catch(() => {
+    throw new Error("Impossible de contacter le serveur. Vérifiez votre connexion.");
   });
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message ?? "API error");
+    const message = Array.isArray(error.message)
+      ? error.message[0]
+      : error.message;
+    throw new Error(message ?? "Erreur inattendue");
   } else {
-    return res.json();
+    const text = await res.text();
+    return text ? JSON.parse(text) : (undefined as T);
   }
 }

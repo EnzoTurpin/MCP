@@ -1,4 +1,4 @@
-import LoginForm from "@/features/auth/components/login-form";
+import RegisterForm from "@/features/auth/components/register-form";
 
 const C    = "#08fdd8";
 const GOLD = "#ff8c00";
@@ -18,7 +18,7 @@ const MetricRow = ({ label, value, color = C }: { label: string; value: number; 
   </div>
 );
 
-const LoginPage = () => {
+const RegisterPage = () => {
   return (
     <main className="flex h-screen bg-background" style={{ fontFamily: "'Share Tech Mono', monospace" }}>
       {/* Left — eDEX system monitor */}
@@ -67,10 +67,10 @@ const LoginPage = () => {
           <div style={{ fontSize: 10, color: `${C}55`, letterSpacing: "0.2em", marginBottom: 4 }}>
             ── DIAGNOSTICS SYSTÈME ──
           </div>
-          <MetricRow label="CPU" value={78} />
-          <MetricRow label="MEM" value={61} />
-          <MetricRow label="NET" value={43} color={GOLD} />
-          <MetricRow label="I/O " value={29} color={GOLD} />
+          <MetricRow label="CPU" value={54} />
+          <MetricRow label="MEM" value={38} />
+          <MetricRow label="NET" value={67} color={GOLD} />
+          <MetricRow label="I/O " value={19} color={GOLD} />
         </div>
 
         {/* Terminal log */}
@@ -78,9 +78,9 @@ const LoginPage = () => {
           className="relative z-10 px-5 py-4"
           style={{ borderBottom: `1px solid ${C}22`, fontSize: 11, lineHeight: 2, color: `${C}66`, letterSpacing: "0.08em" }}
         >
-          <div>&gt; MODULE AUTH CHARGÉ</div>
-          <div>&gt; CHIFFREMENT AES-256 ACTIF</div>
-          <div style={{ color: `${C}aa` }}>&gt; EN ATTENTE DES IDENTIFIANTS...</div>
+          <div>&gt; MODULE ENREGISTREMENT ACTIF</div>
+          <div>&gt; PROTOCOLE CRÉATION COMPTE v3</div>
+          <div style={{ color: `${C}aa` }}>&gt; PRÊT À INITIALISER...</div>
         </div>
 
         {/* Main message */}
@@ -99,9 +99,9 @@ const LoginPage = () => {
               letterSpacing: "0.04em",
             }}
           >
-            ORGANISEZ.<br />
-            COLLABOREZ.<br />
-            <span style={{ color: C, textShadow: `0 0 12px ${C}66` }}>AVANCEZ.</span>
+            CRÉEZ.<br />
+            PARTAGEZ.<br />
+            <span style={{ color: C, textShadow: `0 0 12px ${C}66` }}>RÉUSSISSEZ.</span>
           </h2>
         </div>
 
@@ -111,9 +111,9 @@ const LoginPage = () => {
           style={{ borderTop: `1px solid ${C}22` }}
         >
           {[
-            { label: "Projet Web", pct: 72 },
-            { label: "Marketing",  pct: 48 },
-            { label: "Mobile",     pct: 91 },
+            { label: "Design",  pct: 83 },
+            { label: "Dev",     pct: 91 },
+            { label: "Data",    pct: 55 },
           ].map((item, i) => (
             <div
               key={item.label}
@@ -148,10 +148,10 @@ const LoginPage = () => {
           backgroundSize: "24px 24px",
         }}
       >
-        <LoginForm />
+        <RegisterForm />
       </div>
     </main>
   );
 };
 
-export default LoginPage;
+export default RegisterPage;

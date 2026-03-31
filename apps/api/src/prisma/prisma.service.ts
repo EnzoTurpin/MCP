@@ -1,6 +1,6 @@
 // prisma.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../prisma/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg'; // Assure-toi d'avoir installé 'pg'
 

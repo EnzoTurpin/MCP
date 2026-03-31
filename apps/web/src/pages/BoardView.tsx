@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, X, Star, Pencil, Trash2, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, Star, Pencil, Trash2, Check, Eye } from "lucide-react";
 import {
   getProject,
   createTask,
@@ -10,6 +10,7 @@ import {
   type ProjectStatus,
 } from "@/features/projects/actions/project.actions";
 import { CardDetailModal, type CardModalData } from "@/src/components/CardDetailModal";
+import { getUser } from "@/shared/lib/auth";
 
 const C    = "#08fdd8";
 const GOLD = "#ff8c00";
@@ -142,6 +143,7 @@ const CardItem = ({
 const Column = ({
   column,
   projectId,
+  readOnly,
   onCardAdded,
   onCardClick,
   onColumnRenamed,
@@ -149,6 +151,7 @@ const Column = ({
 }: {
   column: KanbanColumn;
   projectId: string;
+  readOnly?: boolean;
   onCardAdded: (colId: string, card: KanbanCard) => void;
   onCardClick: (card: KanbanCard) => void;
   onColumnRenamed: (colId: string, newName: string) => void;
@@ -277,7 +280,7 @@ const Column = ({
               {column.title}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              {hoveringHeader && (
+              {hoveringHeader && !readOnly && (
                 <>
                   <button
                     onClick={() => { setEditing(true); setNameDraft(column.title); }}
@@ -326,85 +329,87 @@ const Column = ({
         ))}
       </div>
 
-      <div style={{ padding: "4px 8px 8px", flexShrink: 0 }}>
-        {adding ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <textarea
-              ref={inputRef}
-              autoFocus
-              rows={2}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirm(); }
-                if (e.key === "Escape") { setAdding(false); setDraft(""); }
-              }}
-              placeholder="Titre de la carte..."
+      {!readOnly && (
+        <div style={{ padding: "4px 8px 8px", flexShrink: 0 }}>
+          {adding ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <textarea
+                ref={inputRef}
+                autoFocus
+                rows={2}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirm(); }
+                  if (e.key === "Escape") { setAdding(false); setDraft(""); }
+                }}
+                placeholder="Titre de la carte..."
+                style={{
+                  width: "100%",
+                  backgroundColor: CARD,
+                  border: `1px solid ${accent}55`,
+                  color: "#d0f0ec",
+                  fontSize: 11,
+                  fontFamily: "'Share Tech Mono', monospace",
+                  padding: "6px 8px",
+                  resize: "none",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              <div style={{ display: "flex", gap: 4 }}>
+                <button
+                  onClick={confirm}
+                  style={{
+                    flex: 1,
+                    padding: "5px 0",
+                    backgroundColor: accent,
+                    color: BG,
+                    border: "none",
+                    fontSize: 9,
+                    fontFamily: "'Share Tech Mono', monospace",
+                    letterSpacing: "0.15em",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                  }}
+                >
+                  AJOUTER
+                </button>
+                <button
+                  onClick={() => { setAdding(false); setDraft(""); }}
+                  style={{ padding: "5px 8px", backgroundColor: "transparent", border: `1px solid ${accent}33`, color: `${accent}66`, cursor: "pointer", lineHeight: 0 }}
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAdding(true)}
               style={{
                 width: "100%",
-                backgroundColor: CARD,
-                border: `1px solid ${accent}55`,
-                color: "#d0f0ec",
-                fontSize: 11,
+                padding: "6px",
+                backgroundColor: "transparent",
+                border: `1px dashed ${accent}22`,
+                color: `${accent}44`,
+                fontSize: 9,
                 fontFamily: "'Share Tech Mono', monospace",
-                padding: "6px 8px",
-                resize: "none",
-                outline: "none",
-                boxSizing: "border-box",
+                letterSpacing: "0.15em",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                transition: "all 0.15s",
               }}
-            />
-            <div style={{ display: "flex", gap: 4 }}>
-              <button
-                onClick={confirm}
-                style={{
-                  flex: 1,
-                  padding: "5px 0",
-                  backgroundColor: accent,
-                  color: BG,
-                  border: "none",
-                  fontSize: 9,
-                  fontFamily: "'Share Tech Mono', monospace",
-                  letterSpacing: "0.15em",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                AJOUTER
-              </button>
-              <button
-                onClick={() => { setAdding(false); setDraft(""); }}
-                style={{ padding: "5px 8px", backgroundColor: "transparent", border: `1px solid ${accent}33`, color: `${accent}66`, cursor: "pointer", lineHeight: 0 }}
-              >
-                <X size={10} />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setAdding(true)}
-            style={{
-              width: "100%",
-              padding: "6px",
-              backgroundColor: "transparent",
-              border: `1px dashed ${accent}22`,
-              color: `${accent}44`,
-              fontSize: 9,
-              fontFamily: "'Share Tech Mono', monospace",
-              letterSpacing: "0.15em",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${accent}55`; e.currentTarget.style.color = `${accent}77`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${accent}22`; e.currentTarget.style.color = `${accent}44`; }}
-          >
-            <Plus size={10} /> AJOUTER UNE CARTE
-          </button>
-        )}
-      </div>
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${accent}55`; e.currentTarget.style.color = `${accent}77`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${accent}22`; e.currentTarget.style.color = `${accent}44`; }}
+            >
+              <Plus size={10} /> AJOUTER UNE CARTE
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -421,6 +426,8 @@ const BoardView = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
 
+  const currentUserId = String(getUser()?.sub ?? "");
+
   useEffect(() => {
     if (!id) return;
     getProject(id)
@@ -431,6 +438,8 @@ const BoardView = () => {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const isReadOnly = project !== null && project.owner_id !== currentUserId;
 
   const handleCardAdded = (colId: string, card: KanbanCard) => {
     setColumns((prev) =>
@@ -572,8 +581,16 @@ const BoardView = () => {
           <Star size={14} fill={starred ? GOLD : "none"} />
         </button>
 
-        <div style={{ marginLeft: "auto", fontSize: 9, color: `${accent}44`, letterSpacing: "0.15em" }}>
-          {project?._count.members ?? 0} MEMBRES · {totalCards} CARTES
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
+          {isReadOnly && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#ff8c00", letterSpacing: "0.15em", border: "1px solid #ff8c0044", padding: "2px 8px" }}>
+              <Eye size={10} />
+              LECTURE SEULE
+            </div>
+          )}
+          <span style={{ fontSize: 9, color: `${accent}44`, letterSpacing: "0.15em" }}>
+            {project?._count.members ?? 0} MEMBRES · {totalCards} CARTES
+          </span>
         </div>
       </div>
 
@@ -607,6 +624,7 @@ const BoardView = () => {
               key={col.id}
               column={col}
               projectId={id}
+              readOnly={isReadOnly}
               onCardAdded={handleCardAdded}
               onCardClick={handleCardClick}
               onColumnRenamed={handleColumnRenamed}
@@ -621,6 +639,7 @@ const BoardView = () => {
           card={selectedCard}
           columns={columns.map((c) => ({ id: c.id, title: c.title, color: c.color }))}
           projectId={id}
+          readOnly={isReadOnly}
           onClose={() => setSelectedCard(null)}
           onUpdated={handleCardUpdated}
           onDeleted={handleCardDeleted}

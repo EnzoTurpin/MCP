@@ -69,7 +69,6 @@ export class ProjectsService {
     });
 
     if (!project) throw new NotFoundException('Project not found');
-    await this.assertMemberOrOwner(projectId, userId, project.owner_id);
 
     return project;
   }

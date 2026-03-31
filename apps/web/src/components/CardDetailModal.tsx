@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Trash2, Calendar, AlignLeft, Flag, MoveRight, Check } from "lucide-react";
+import { X, Trash2, Calendar, AlignLeft, Flag, MoveRight, Check, Eye } from "lucide-react";
 import { updateTask, deleteTask } from "@/features/projects/actions/project.actions";
 
 const C    = "#08fdd8";
@@ -39,6 +39,7 @@ interface CardDetailModalProps {
   card: CardModalData;
   columns: ColumnOption[];
   projectId: string;
+  readOnly?: boolean;
   onClose: () => void;
   onUpdated: (updates: Partial<CardModalData> & { statusId?: string }) => void;
   onDeleted: () => void;
@@ -48,6 +49,7 @@ export const CardDetailModal = ({
   card,
   columns,
   projectId,
+  readOnly = false,
   onClose,
   onUpdated,
   onDeleted,
@@ -170,7 +172,7 @@ export const CardDetailModal = ({
 
           {/* Title */}
           <div style={{ flex: 1 }}>
-            {editingTitle ? (
+            {editingTitle && !readOnly ? (
               <input
                 ref={titleRef}
                 value={title}
@@ -195,21 +197,21 @@ export const CardDetailModal = ({
               />
             ) : (
               <h2
-                onClick={() => setEditingTitle(true)}
-                title="Cliquer pour modifier"
+                onClick={readOnly ? undefined : () => setEditingTitle(true)}
+                title={readOnly ? undefined : "Cliquer pour modifier"}
                 style={{
                   margin: 0,
                   fontSize: 14,
                   fontWeight: 700,
                   color: "#d0f0ec",
                   letterSpacing: "0.08em",
-                  cursor: "text",
+                  cursor: readOnly ? "default" : "text",
                   lineHeight: 1.4,
                   borderBottom: `1px dashed transparent`,
                   transition: "border-color 0.15s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderBottomColor = `${accent}44`)}
-                onMouseLeave={(e) => (e.currentTarget.style.borderBottomColor = "transparent")}
+                onMouseEnter={readOnly ? undefined : (e) => (e.currentTarget.style.borderBottomColor = `${accent}44`)}
+                onMouseLeave={readOnly ? undefined : (e) => (e.currentTarget.style.borderBottomColor = "transparent")}
               >
                 {title}
               </h2>
@@ -218,6 +220,11 @@ export const CardDetailModal = ({
             <div style={{ marginTop: 4, fontSize: 9, color: `${accent}55`, letterSpacing: "0.15em" }}>
               DANS · {columns.find((c) => c.id === statusId)?.title ?? statusId}
               {saving && <span style={{ marginLeft: 10, color: `${C}44` }}>SAUVEGARDE...</span>}
+              {readOnly && (
+                <span style={{ marginLeft: 10, display: "inline-flex", alignItems: "center", gap: 4, color: "#ff8c00", border: "1px solid #ff8c0044", padding: "1px 6px" }}>
+                  <Eye size={8} /> LECTURE SEULE
+                </span>
+              )}
             </div>
           </div>
 
@@ -270,14 +277,15 @@ export const CardDetailModal = ({
               </div>
               <textarea
                 value={description}
-                onChange={(e) => { setDescription(e.target.value); setDescDirty(true); }}
-                placeholder="Ajouter une description plus détaillée..."
+                onChange={readOnly ? undefined : (e) => { setDescription(e.target.value); setDescDirty(true); }}
+                readOnly={readOnly}
+                placeholder={readOnly ? "" : "Ajouter une description plus détaillée..."}
                 rows={6}
                 style={{
                   width: "100%",
                   backgroundColor: CARD,
                   border: `1px solid ${accent}22`,
-                  color: "#d0f0ec",
+                  color: readOnly ? `${accent}88` : "#d0f0ec",
                   fontSize: 11,
                   fontFamily: "'Share Tech Mono', monospace",
                   letterSpacing: "0.03em",
@@ -287,9 +295,10 @@ export const CardDetailModal = ({
                   outline: "none",
                   boxSizing: "border-box",
                   transition: "border-color 0.15s",
+                  cursor: readOnly ? "default" : undefined,
                 }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = `${accent}55`)}
-                onBlur={(e) => (e.currentTarget.style.borderColor = `${accent}22`)}
+                onFocus={readOnly ? undefined : (e) => (e.currentTarget.style.borderColor = `${accent}55`)}
+                onBlur={readOnly ? undefined : (e) => (e.currentTarget.style.borderColor = `${accent}22`)}
               />
               {descDirty && (
                 <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
@@ -349,22 +358,24 @@ export const CardDetailModal = ({
               <SideLabel icon={<MoveRight size={10} />} label="STATUT" accent={accent} />
               <select
                 value={statusId}
-                onChange={(e) => changeStatus(e.target.value)}
+                onChange={readOnly ? undefined : (e) => changeStatus(e.target.value)}
+                disabled={readOnly}
                 style={{
                   width: "100%",
                   backgroundColor: CARD,
                   border: `1px solid ${accent}33`,
-                  color: accent,
+                  color: readOnly ? `${accent}55` : accent,
                   fontSize: 9,
                   fontFamily: "'Share Tech Mono', monospace",
                   letterSpacing: "0.12em",
                   padding: "6px 8px",
                   outline: "none",
-                  cursor: "pointer",
+                  cursor: readOnly ? "default" : "pointer",
                   appearance: "none",
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2308fdd8'/%3E%3C/svg%3E")`,
+                  backgroundImage: readOnly ? "none" : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2308fdd8'/%3E%3C/svg%3E")`,
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "right 8px center",
+                  opacity: readOnly ? 0.6 : 1,
                 }}
               >
                 {columns.map((col) => (
@@ -385,8 +396,9 @@ export const CardDetailModal = ({
                   return (
                     <button
                       key={p}
-                      onClick={() => changePriority(p)}
+                      onClick={readOnly ? undefined : () => changePriority(p)}
                       title={PRIORITY_LABELS[p]}
+                      disabled={readOnly}
                       style={{
                         flex: 1,
                         padding: "5px 2px",
@@ -396,12 +408,13 @@ export const CardDetailModal = ({
                         fontSize: 8,
                         fontFamily: "'Share Tech Mono', monospace",
                         letterSpacing: "0.1em",
-                        cursor: "pointer",
+                        cursor: readOnly ? "default" : "pointer",
                         transition: "all 0.15s",
                         fontWeight: active ? 700 : 400,
+                        opacity: readOnly && !active ? 0.5 : 1,
                       }}
-                      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.borderColor = col; e.currentTarget.style.color = col; } }}
-                      onMouseLeave={(e) => { if (!active) { e.currentTarget.style.borderColor = `${col}44`; e.currentTarget.style.color = `${col}77`; } }}
+                      onMouseEnter={readOnly ? undefined : (e) => { if (!active) { e.currentTarget.style.borderColor = col; e.currentTarget.style.color = col; } }}
+                      onMouseLeave={readOnly ? undefined : (e) => { if (!active) { e.currentTarget.style.borderColor = `${col}44`; e.currentTarget.style.color = `${col}77`; } }}
                     >
                       {p === "low" ? "BAS" : p === "medium" ? "MED" : "HAU"}
                     </button>
@@ -416,12 +429,13 @@ export const CardDetailModal = ({
               <input
                 type="date"
                 value={deadline}
-                onChange={(e) => changeDeadline(e.target.value)}
+                onChange={readOnly ? undefined : (e) => changeDeadline(e.target.value)}
+                readOnly={readOnly}
                 style={{
                   width: "100%",
                   backgroundColor: CARD,
                   border: `1px solid ${accent}33`,
-                  color: deadline ? "#d0f0ec" : `${accent}44`,
+                  color: deadline ? (readOnly ? `${accent}88` : "#d0f0ec") : `${accent}44`,
                   fontSize: 10,
                   fontFamily: "'Share Tech Mono', monospace",
                   letterSpacing: "0.05em",
@@ -429,6 +443,8 @@ export const CardDetailModal = ({
                   outline: "none",
                   boxSizing: "border-box",
                   colorScheme: "dark",
+                  cursor: readOnly ? "default" : undefined,
+                  opacity: readOnly ? 0.7 : 1,
                 }}
               />
             </section>
@@ -476,7 +492,7 @@ export const CardDetailModal = ({
             <div style={{ flex: 1 }} />
 
             {/* Delete */}
-            <section>
+            {!readOnly && <section>
               <button
                 onClick={handleDelete}
                 style={{
@@ -526,7 +542,7 @@ export const CardDetailModal = ({
                   ANNULER
                 </button>
               )}
-            </section>
+            </section>}
           </div>
         </div>
       </div>

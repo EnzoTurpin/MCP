@@ -29,6 +29,7 @@ export type ProjectSummary = {
 export type ProjectDetail = {
   id: string;
   name: string;
+  owner_id: string;
   statuses: ProjectStatus[];
   _count: { members: number };
 };

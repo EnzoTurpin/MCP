@@ -1,19 +1,19 @@
-# Boilerplate Full-Stack — React + NestJS
+# Jarvim — Gestionnaire de projets Kanban
 
-Un boilerplate production-ready avec authentification complète, architecture feature-first et stack moderne.
+Application de gestion de projets en mode Kanban avec authentification, collaboration d'équipe et partage de boards.
 
 ---
 
 ## Stack technique
 
-| Couche          | Technologie                          |
-| --------------- | ------------------------------------ |
-| Frontend        | React 19 + Vite + TypeScript         |
-| Backend         | NestJS + TypeScript                  |
-| Base de données | PostgreSQL + Prisma ORM              |
-| Auth            | JWT dual-token + Google OAuth        |
-| UI              | shadcn/ui + Tailwind CSS v4          |
-| Monorepo        | npm workspaces                       |
+| Couche          | Technologie                              |
+| --------------- | ---------------------------------------- |
+| Frontend        | React 19 + Vite + TypeScript             |
+| Backend         | NestJS + TypeScript                      |
+| Base de données | PostgreSQL + Prisma ORM                  |
+| Auth            | JWT (access token + refresh token)       |
+| UI              | shadcn/ui + Tailwind CSS v4              |
+| Monorepo        | npm workspaces + Turbo                   |
 
 ---
 
@@ -28,12 +28,23 @@ Un boilerplate production-ready avec authentification complète, architecture fe
 ## Installation
 
 ```bash
-# Cloner le repo
-git clone https://github.com/HenanAeroo/boilerplate.git
-cd boilerplate
+git clone <url-du-repo>
+cd jarvim
 
-# Installer les dépendances
-npm install
+# Setup automatique (dépendances + env + Prisma)
+./setup.sh
+```
+
+Le script `setup.sh` :
+- vérifie les prérequis
+- crée les fichiers `.env` depuis les `.env.example` s'ils sont absents
+- installe les dépendances npm (workspaces)
+- génère le client Prisma
+
+Pour appliquer les migrations en même temps :
+
+```bash
+RUN_MIGRATIONS=true ./setup.sh
 ```
 
 ---
@@ -43,27 +54,15 @@ npm install
 ### `apps/api/.env`
 
 ```env
-# Base de données
-DATABASE_URL=postgresql://user:password@localhost:5432/boilerplate
-
-# JWT
-JWT_SECRET=your_jwt_secret
-JWT_REFRESH_SECRET=your_refresh_secret
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:3001/auth/google/callback
-
-# App
-PORT=3001
-FRONT_URL=http://localhost:5173
+DATABASE_URL="postgres://<user>:<password>@localhost:5433/<database>?schema=public"
+JWT_SECRET="<your-jwt-secret>"
+FRONT_URL="http://localhost:5173"
 ```
 
-### `apps/web/.env.local`
+### `apps/web/.env`
 
 ```env
-VITE_API_URL=http://localhost:3001
+VITE_API_URL=http://localhost:3000
 ```
 
 ---
@@ -71,12 +70,12 @@ VITE_API_URL=http://localhost:3001
 ## Lancer le projet
 
 ```bash
-# A la racine
+# À la racine
 npm run dev
 ```
 
 - Frontend : http://localhost:5173
-- Backend : http://localhost:3001
+- Backend  : http://localhost:3000
 
 ---
 
@@ -89,7 +88,10 @@ cd apps/api
 npx prisma generate
 
 # Appliquer les migrations
-npx prisma migrate dev
+npx prisma migrate deploy
+
+# (optionnel) Interface d'administration
+npx prisma studio
 ```
 
 ---
@@ -99,57 +101,117 @@ npx prisma migrate dev
 ### Monorepo
 
 ```
-boilerplate/
+jarvim/
 ├── apps/
 │   ├── api/          # Backend NestJS
 │   └── web/          # Frontend React + Vite
-└── README.md
+├── setup.sh          # Script d'installation
+└── turbo.json
 ```
 
-### Frontend — Feature-first
+### Frontend
 
 ```
-apps/web/
-├── src/
-│   ├── pages/        # Pages (Home, Login, OAuthCallback)
-│   ├── components/   # Composants structurels (AppLayout, ProtectedRoute)
-│   ├── App.tsx       # Routing React Router
-│   └── main.tsx      # Point d'entrée
-├── features/         # Logique métier par domaine
-│   └── auth/
-│       ├── actions/  # Appels API
-│       ├── components/ # Formulaires
-│       ├── hooks/    # useAuth
-│       └── types.ts
-└── shared/           # Code réutilisable
-    ├── components/   # Layout, UI
-    ├── lib/          # api.ts, auth.ts, utils.ts
-    └── types/        # Types globaux
+apps/web/src/
+├── components/
+│   ├── AppLayout.tsx
+│   ├── CardDetailModal.tsx
+│   ├── ProtectedRoute.tsx
+│   ├── PublicRoute.tsx
+│   └── ShareBoardModal.tsx
+└── pages/
+    ├── Landing.tsx           # /
+    ├── Login.tsx             # /login
+    ├── Register.tsx          # /register
+    ├── OAuthCallback.tsx     # /oauth/callback
+    ├── Home.tsx              # /boards
+    ├── BoardView.tsx         # /boards/:id
+    ├── SharedBoardView.tsx   # /shared/:token
+    ├── AcceptInvitation.tsx  # /invitations/:token
+    └── Profil.tsx            # /profile
+```
+
+### Backend
+
+```
+apps/api/src/
+├── auth/        # Authentification (JWT + Local)
+├── users/       # Gestion des utilisateurs
+├── projects/    # Boards, tâches, membres, partage
+└── prisma/      # Service Prisma
 ```
 
 ---
 
-## Authentification
+## API — Endpoints principaux
 
-| Méthode      | Route                 |
-| ------------ | --------------------- |
-| Register     | `POST /auth/register` |
-| Login        | `POST /auth/login`    |
-| Refresh      | `POST /auth/refresh`  |
-| Logout       | `POST /auth/logout`   |
-| Google OAuth | `GET /auth/google`    |
+### Auth — `/auth`
 
-**Stratégie JWT dual-token :**
+| Méthode | Route            | Description              |
+| ------- | ---------------- | ------------------------ |
+| POST    | `/auth/register` | Créer un compte          |
+| POST    | `/auth/login`    | Se connecter             |
+| POST    | `/auth/refresh`  | Rafraîchir l'access token|
+| POST    | `/auth/logout`   | Se déconnecter           |
 
-- `accessToken` → stocké en mémoire JS (15 min)
-- `refreshToken` → cookie httpOnly (7 jours)
-- Refresh automatique au montage de l'app
+### Projets — `/projects`
+
+| Méthode | Route                               | Description                  |
+| ------- | ----------------------------------- | ---------------------------- |
+| GET     | `/projects`                         | Lister ses projets           |
+| POST    | `/projects`                         | Créer un projet              |
+| GET     | `/projects/:id`                     | Détail d'un projet           |
+| PATCH   | `/projects/:id`                     | Modifier un projet           |
+| DELETE  | `/projects/:id`                     | Supprimer un projet          |
+| POST    | `/projects/:id/favorite`            | Basculer en favori           |
+| POST    | `/projects/:id/share-link`          | Générer un lien de partage   |
+| DELETE  | `/projects/:id/share-link`          | Révoquer le lien de partage  |
+| POST    | `/projects/:id/invitations`         | Inviter un membre par email  |
+| POST    | `/projects/invitations/accept`      | Accepter une invitation      |
+| GET     | `/projects/:id/members`             | Lister les membres           |
+| PATCH   | `/projects/:id/members/:userId`     | Modifier le rôle d'un membre |
+| DELETE  | `/projects/:id/members/:userId`     | Retirer un membre            |
+| POST    | `/projects/:id/tasks`               | Créer une tâche              |
+| PATCH   | `/projects/:id/tasks/:taskId`       | Modifier une tâche           |
+| DELETE  | `/projects/:id/tasks/:taskId`       | Supprimer une tâche          |
+
+### Routes publiques (sans auth)
+
+| Méthode | Route                          | Description                       |
+| ------- | ------------------------------ | --------------------------------- |
+| GET     | `/projects/shared/:shareToken` | Accéder à un board partagé        |
+| GET     | `/projects/invitations/:token` | Consulter une invitation          |
 
 ---
 
-## Protection des routes
+## Modèles de données
 
-Le composant `ProtectedRoute.tsx` protège les routes :
+| Modèle              | Description                                     |
+| ------------------- | ----------------------------------------------- |
+| `User`              | Compte utilisateur                              |
+| `Project`           | Board Kanban                                    |
+| `ProjectMember`     | Appartenance d'un utilisateur à un projet       |
+| `ProjectFavorite`   | Projets marqués en favoris                      |
+| `ProjectStatus`     | Colonnes du board (ex : À faire, En cours, Done)|
+| `Task`              | Carte de tâche avec priorité, assignee, deadline|
+| `ProjectInvitation` | Invitation par email avec token et expiration   |
+| `RefreshToken`      | Tokens de rafraîchissement JWT                  |
+| `TaskActivity`      | Journal d'audit des modifications               |
 
-- `/` → redirige vers `/login` si non connecté
-- `/login` → redirige vers `/` si déjà connecté
+---
+
+## Rôles
+
+| Rôle     | Droits                                      |
+| -------- | ------------------------------------------- |
+| `owner`  | Tous les droits, suppression du projet      |
+| `admin`  | Gestion des membres, tâches et statuts      |
+| `member` | Lecture et modification des tâches          |
+
+---
+
+## Contribuer
+
+1. Créer une branche depuis `main` : `feat/<ticket>-<description>`
+2. Appliquer les conventions de commit (Conventional Commits, en français)
+3. Ouvrir une PR avec le template fourni

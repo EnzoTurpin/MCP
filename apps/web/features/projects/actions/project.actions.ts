@@ -30,8 +30,29 @@ export type ProjectDetail = {
   id: string;
   name: string;
   owner_id: string;
+  share_token: string | null;
   statuses: ProjectStatus[];
+  members: { user_id: string }[];
   _count: { members: number };
+};
+
+export type ProjectMember = {
+  id: string;
+  display_name: string;
+  email: string;
+  joined_at?: string;
+};
+
+export type MembersResponse = {
+  owner: ProjectMember;
+  members: ProjectMember[];
+};
+
+export type InvitationInfo = {
+  email: string;
+  projectName: string;
+  invitedBy: string;
+  expiresAt: string;
 };
 
 function auth() {
@@ -109,6 +130,64 @@ export function updateStatus(
 
 export function deleteStatus(projectId: string, statusId: string): Promise<void> {
   return apiFetch<void>(`/projects/${projectId}/statuses/${statusId}`, {
+    method: "DELETE",
+    ...auth(),
+  });
+}
+
+// ─── Partage via lien ────────────────────────────────────────────────────────
+
+export function generateShareLink(projectId: string): Promise<{ shareToken: string }> {
+  return apiFetch<{ shareToken: string }>(`/projects/${projectId}/share-link`, {
+    method: "POST",
+    ...auth(),
+  });
+}
+
+export function revokeShareLink(projectId: string): Promise<void> {
+  return apiFetch<void>(`/projects/${projectId}/share-link`, {
+    method: "DELETE",
+    ...auth(),
+  });
+}
+
+export function getSharedProject(shareToken: string): Promise<ProjectDetail> {
+  return apiFetch<ProjectDetail>(`/projects/shared/${shareToken}`);
+}
+
+// ─── Invitations par email ────────────────────────────────────────────────────
+
+export function inviteMember(
+  projectId: string,
+  email: string,
+): Promise<{ token: string; email: string; expires_at: string }> {
+  return apiFetch(`/projects/${projectId}/invitations`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+    ...auth(),
+  });
+}
+
+export function getInvitationInfo(token: string): Promise<InvitationInfo> {
+  return apiFetch<InvitationInfo>(`/projects/invitations/${token}`);
+}
+
+export function acceptInvitation(token: string): Promise<{ projectId: string }> {
+  return apiFetch<{ projectId: string }>("/projects/invitations/accept", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+    ...auth(),
+  });
+}
+
+// ─── Gestion des membres ──────────────────────────────────────────────────────
+
+export function getMembers(projectId: string): Promise<MembersResponse> {
+  return apiFetch<MembersResponse>(`/projects/${projectId}/members`, auth());
+}
+
+export function removeMember(projectId: string, userId: string): Promise<void> {
+  return apiFetch<void>(`/projects/${projectId}/members/${userId}`, {
     method: "DELETE",
     ...auth(),
   });

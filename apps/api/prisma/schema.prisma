@@ -42,11 +42,12 @@ model User {
 }
 
 model Project {
-  id         String   @id @default(uuid()) @db.Uuid
-  name       String   @db.VarChar(120)
-  owner_id   String   @db.Uuid
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(120)
+  owner_id    String   @db.Uuid
+  share_token String?  @unique @db.VarChar(64)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   owner       User                @relation("ProjectOwner", fields: [owner_id], references: [id])
   members     ProjectMember[]

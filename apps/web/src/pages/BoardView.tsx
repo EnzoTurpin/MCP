@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, X, Star, Pencil, Trash2, Check, Eye } from "lucide-react";
+import { ArrowLeft, Plus, X, Star, Pencil, Trash2, Check, Eye, Share2 } from "lucide-react";
 import {
   getProject,
   createTask,
@@ -10,6 +10,7 @@ import {
   type ProjectStatus,
 } from "@/features/projects/actions/project.actions";
 import { CardDetailModal, type CardModalData } from "@/src/components/CardDetailModal";
+import { ShareBoardModal } from "@/src/components/ShareBoardModal";
 import { getUser } from "@/shared/lib/auth";
 
 const C    = "#08fdd8";
@@ -425,6 +426,7 @@ const BoardView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const currentUserId = String(getUser()?.sub ?? "");
 
@@ -439,7 +441,10 @@ const BoardView = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const isReadOnly = project !== null && project.owner_id !== currentUserId;
+  const isReadOnly =
+    project !== null &&
+    project.owner_id !== currentUserId &&
+    !project.members.some((m) => m.user_id === currentUserId);
 
   const handleCardAdded = (colId: string, card: KanbanCard) => {
     setColumns((prev) =>
@@ -588,6 +593,29 @@ const BoardView = () => {
               LECTURE SEULE
             </div>
           )}
+          {!isReadOnly && (
+            <button
+              onClick={() => setShowShareModal(true)}
+              style={{
+                background: "none",
+                border: `1px solid ${accent}33`,
+                cursor: "pointer",
+                color: `${accent}88`,
+                padding: "3px 10px",
+                fontSize: 9,
+                letterSpacing: "0.12em",
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                fontFamily: "'Share Tech Mono', monospace",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = accent; e.currentTarget.style.borderColor = `${accent}66`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = `${accent}88`; e.currentTarget.style.borderColor = `${accent}33`; }}
+            >
+              <Share2 size={10} /> PARTAGER
+            </button>
+          )}
           <span style={{ fontSize: 9, color: `${accent}44`, letterSpacing: "0.15em" }}>
             {project?._count.members ?? 0} MEMBRES · {totalCards} CARTES
           </span>
@@ -643,6 +671,16 @@ const BoardView = () => {
           onClose={() => setSelectedCard(null)}
           onUpdated={handleCardUpdated}
           onDeleted={handleCardDeleted}
+        />
+      )}
+
+      {showShareModal && project && id && (
+        <ShareBoardModal
+          projectId={id}
+          projectName={project.name}
+          shareToken={project.share_token}
+          onClose={() => setShowShareModal(false)}
+          onShareTokenChanged={(token) => setProject((p) => p ? { ...p, share_token: token } : p)}
         />
       )}
     </div>
